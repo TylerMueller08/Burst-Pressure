@@ -18,7 +18,7 @@ class VideoLogger:
                 print("Error: Could not read the camera frame.")
                 break
 
-            cv2.putText(frame, currentTimestamp, (10, self.frame_height - 10),
+            cv2.putText(frame, currentTimestamp(), (10, self.frame_height - 10),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             self.out.write(frame)
         cv2.destroyAllWindows()

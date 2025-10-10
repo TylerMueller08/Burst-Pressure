@@ -27,7 +27,7 @@ class PressureLogger:
     def _loop(self):
         while self.recording:
             with self.lock:
-                self.csv_writer.writerow([currentTimestamp(), self._read_pressure() or ''])
+                self.csv_writer.writerow([currentTimestamp(), self._read_pressure()])
                 self.csv_file.flush()
             time.sleep(0.25) # Time between updates.
 
