@@ -15,39 +15,27 @@ class PressureLogger:
         if self.csv_file.tell() == 0:
             self.csv_writer.writerow(['Timestamp [hr:min:sec.ms]', 'Pressure [PSI]'])
     
+    def _read_pressure(self):
+        try:
+            raw = self.serial_port.readline()
+            line = raw.decode('utf-8', errors='ignore').strip()
+            nums = re.findall(r"[-+]?\d*\.\d+|[-+]?\d+", line)
+            return float(nums[-1]) if nums else None
+        except:
+            return None
+        
+    def _loop(self):
+        while self.recording:
+            with self.lock:
+                self.csv_writer.writerow([currentTimestamp(), self._read_pressure() or ''])
+                self.csv_file.flush()
+            time.sleep(0.25) # Time between updates.
+
     def start(self):
         self.recording = True
-        threading.Thread(target=self._pressure_loop, daemon=True).start()
-
-    def _pressure_loop(self):
-        while self.recording:
-            timestamp = currentTimestamp()
-            value = None
-
-            try:
-                raw = self.serial_port.readline()
-                if raw:
-                    try:
-                        line = raw.decode('utf-8', errors='ignore').strip()
-                    except:
-                        line = str(raw)
-
-                    nums = re.findall(r"[-+]?\d*\.\d+|[-+]?\d+", line)
-                    if nums:
-                        try:
-                            value = float(nums[-1])
-                        except:
-                            value = nums[-1]
-            except Exception as e:
-                print("Error: Pressure reading:", e)
-                
-            with self.lock:
-                self.csv_writer.writerow([timestamp, value if value is not None else ''])
-                self.csv_file.flush()
-
-            time.sleep(0.25)
+        threading.Thread(target=self._loop, daemon=True).start()
 
     def stop(self):
         self.recording = False
-        time.sleep(0.3) # Allowing for the last write
+        time.sleep(0.3) # Allow time for last write.
         self.csv_file.close()
