@@ -4,29 +4,30 @@ import pandas as pd
 import os
 
 # User-Adjusted Settings
-VIDEO_FILE = "../Data/Video_10-10-2025_13-29-22.mp4"
-OUTPUT_FILE = "../Data/MergedData_TESTING.csv"
-SAVE_DEBUG = False
+VIDEO_FILE = r"C:/Users/Tyler Mueller/Documents/Burst-Pressure/Data/VideoTestRaw.mov"
+OUTPUT_FILE = r"C:/Users/Tyler Mueller/Documents/Burst-Pressure/Results/Diameters_TESTING.csv"
+SAVE_DEBUG = True
 
 def measure_diameter(frame):
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray, (5, 5), 0)
+    
+    # Ignoring the timestamp,
+    height = gray.shape[0]
+    roi = gray[:int(0.9*height), :]
 
-    # Detect edges.
+    blur = cv2.GaussianBlur(roi, (5, 5), 0)
     edges = cv2.Canny(blur, 50, 150)
 
-    # Detect contours.
-    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    vertical_profile = np.sum(edges, axis=0)
 
-    if len(contours) == 0:
+    threshold = 5
+    cols = np.where(vertical_profile > threshold)[0]
+
+    if len(cols) == 0:
         return None
     
-    # Assuming the largest contour is the tube,
-    c = max(contours, key=cv2.contourArea)
-    x, y, w, h = cv2.boundingRect(c)
-
-    # Tube width [pixels]
-    return w
+    diameter_px = cols[-1] - cols[0]
+    return diameter_px
 
 def process_video(video_path, output_file, save_debug=False):
     cap = cv2.VideoCapture(video_path)
