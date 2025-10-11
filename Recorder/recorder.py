@@ -7,7 +7,7 @@ from pressure_logger import PressureLogger
 from utils import currentDatestamp
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-RESULTS_DIR = os.path.join(CURRENT_DIR, "Results")
+RESULTS_DIR = os.path.join(CURRENT_DIR, "Data")
 
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
