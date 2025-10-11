@@ -8,7 +8,7 @@ class MockSerial:
         self.timeout = timeout
         self.isOpen = True
         self.pressure = 0.0
-        self.increment = 1.0 # PSI per read
+        self.increment = 1.0
 
     @property
     def is_open(self):

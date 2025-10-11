@@ -22,13 +22,19 @@ class VideoLogger:
         if len(indices) > 1:
             return indices[-1] - indices[0] # Return width [pixels]
         return None
-    
+
     def controlLoop(self):
         while self.recording:
             ret, frame = self.cam.read()
             if not ret:
                 break
                 
+            debug_frame = self.process_frame(frame)
+            cv2.imshow("Debug Diameter", debug_frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            
             diameter = self.measureDiameter(frame)
             with self.lock:
                 self.latestDiameter = diameter
@@ -50,3 +56,33 @@ class VideoLogger:
     def getLatestDiameter(self):
         with self.lock:
             return self.latestDiameter
+        
+    def process_frame(self, frame):
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (7,7), 0)
+
+        # Threshold for bright object vs background
+        _, thresh = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
+
+        # Morphological closing to remove text holes
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15,15))
+        closed = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
+
+        contours, _ = cv2.findContours(closed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        if len(contours) > 0:
+            c = max(contours, key=cv2.contourArea)
+
+            rect = cv2.minAreaRect(c)  
+            box = cv2.boxPoints(rect).astype(int)
+
+            cv2.drawContours(frame, [box], 0, (0,255,0), 2)
+
+            width, height = rect[1]
+            diameter = min(width, height)
+
+            center = tuple(map(int, rect[0]))
+            cv2.putText(frame, f"Diameter: {int(diameter)}px", (50, 50),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+
+        return frame
