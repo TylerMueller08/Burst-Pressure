@@ -1,5 +1,5 @@
 import tkinter as tk
-from recorder import RecorderController
+from RecorderController import RecorderController
 
 controller = RecorderController()
 
