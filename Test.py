@@ -5,49 +5,57 @@ def process_frame(self, frame):
     # Edge detection
     edges = cv2.Canny(gray, 50, 150)
 
-    # Mask edges to avoid false edges near borders (optional, tweak as needed)
     h, w = edges.shape
     mask = np.zeros_like(edges)
     mask[int(0.1*h):int(0.9*h), :] = 255
     edges = cv2.bitwise_and(edges, mask)
 
-    # Get all edge coordinates
-    ys, xs = np.where(edges > 0)
-    if len(xs) == 0:
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
+
+    if len(contours) < 2:
         return frame, None
 
-    # Split into left side and right side based on midpoint
-    mid = w // 2
-    left_points = np.array([(x, y) for x, y in zip(xs, ys) if x < mid])
-    right_points = np.array([(x, y) for x, y in zip(xs, ys) if x >= mid])
+    # Get centers of the main contours
+    contour_centers = []
+    for c in contours:
+        if len(c) < 20:
+            continue
+        [vx, vy, x0, y0] = cv2.fitLine(c, cv2.DIST_L2, 0, 0.01, 0.01)
+        contour_centers.append((x0, y0, vx, vy))
 
-    if len(left_points) < 20 or len(right_points) < 20:
+    if len(contour_centers) < 2:
         return frame, None
 
-    # Fit 2nd-degree polynomials (x as function of y)
-    left_fit = np.polyfit(left_points[:,1], left_points[:,0], deg=2)
-    right_fit = np.polyfit(right_points[:,1], right_points[:,0], deg=2)
+    # Sort by x position of the line’s base point
+    contour_centers = sorted(contour_centers, key=lambda k: k[0])
+    left_line = contour_centers[0]
+    right_line = contour_centers[-1]
 
-    # Draw fitted curves and compute diameters
-    diameters = []
-    for y in range(0, h, 10):  # sample every 10 pixels vertically
-        left_x = int(np.polyval(left_fit, y))
-        right_x = int(np.polyval(right_fit, y))
-        
-        if 0 <= left_x < w and 0 <= right_x < w:
-            diameters.append(right_x - left_x)
-            cv2.circle(frame, (left_x, y), 2, (0,255,0), -1)
-            cv2.circle(frame, (right_x, y), 2, (0,255,0), -1)
-            cv2.line(frame, (left_x, y), (right_x, y), (255,0,0), 1)
+    # Extend lines to top and bottom of frame
+    def line_points(vx, vy, x0, y0, h):
+        lefty = int((-x0*vy/vx) + y0)
+        righty = int(((w-x0)*vy/vx) + y0)
+        return (0, lefty), (w-1, righty)
 
-    if not diameters:
-        return frame, None
+    (lx1, ly1), (lx2, ly2) = line_points(*left_line, h)
+    (rx1, ry1), (rx2, ry2) = line_points(*right_line, h)
 
-    smoothed_diameter = np.mean(diameters)
-    self.diameter_history.append(smoothed_diameter)
+    # Draw lines
+    cv2.line(frame, (lx1, ly1), (lx2, ly2), (0, 255, 0), 2)
+    cv2.line(frame, (rx1, ry1), (rx2, ry2), (0, 255, 0), 2)
+
+    # Estimate diameter at image center
+    y_mid = h // 2
+    leftX = int((lx2-lx1)/(ly2-ly1) * (y_mid-ly1) + lx1) if ly2 != ly1 else lx1
+    rightX = int((rx2-rx1)/(ry2-ry1) * (y_mid-ry1) + rx1) if ry2 != ry1 else rx1
+    diameter = rightX - leftX
+
+    self.diameter_history.append(diameter)
     smoothed_diameter = int(np.mean(self.diameter_history))
 
-    cv2.putText(frame, f"Diameter: {smoothed_diameter:.1f}px", (50, 50),
+    cv2.putText(frame, f"Diameter: {smoothed_diameter}px", (50, 50),
                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
     return frame, smoothed_diameter
+
