@@ -9,7 +9,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULTS_DIR = os.path.join(CURRENT_DIR, "Data")
 os.makedirs(RESULTS_DIR, exist_ok=True)
 
-USE_MOCK_SERIAL = True
+USE_MOCK_SERIAL = False
 
 if USE_MOCK_SERIAL:
     from MockSerial import MockSerial
