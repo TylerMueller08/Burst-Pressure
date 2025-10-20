@@ -59,3 +59,74 @@ def process_frame(self, frame):
 
     return frame, smoothed_diameter
 
+
+import cv2
+import numpy as np
+
+    def process_frame(self, frame):
+        # Parameters you can tune
+        border_ignore_frac = 0.04   # fraction of width/height to ignore around edges
+        central_window_frac = 0.12  # fraction of width used around center to average
+        min_valid_columns = 5       # require at least this many columns in central window
+
+        h, w = frame.shape[:2]
+
+        # 1) Preprocess image for stable edges
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        # Improve local contrast (CLAHE) to handle uneven lighting
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+        gray = clahe.apply(gray)
+
+        # Slight blur to reduce small speckle noise
+        gray = cv2.GaussianBlur(gray, (7, 7), 0)
+
+        # 2) Mask out the outer border area
+        x0 = int(w * border_ignore_frac)
+        x1 = int(w * (1 - border_ignore_frac))
+        y0 = int(h * border_ignore_frac)
+        y1 = int(h * (1 - border_ignore_frac))
+        roi = gray[y0:y1, x0:x1]
+
+        # 3) Take a central vertical slice and average columns → intensity profile
+        cx = (x1 - x0) // 2
+        half_win = int((central_window_frac * (x1 - x0)) / 2)
+        slice_roi = roi[:, cx-half_win:cx+half_win]
+        profile = np.mean(slice_roi, axis=1)
+
+        # 4) Differentiate profile to find strongest transitions
+        diff = np.diff(profile)
+
+        # top wall = strongest edge in upper half
+        top_rel = np.argmin(diff[:len(diff)//2])
+        # bottom wall = strongest edge in lower half
+        bottom_rel = np.argmax(diff[len(diff)//2:]) + len(diff)//2
+
+        # Convert back to full-frame coordinates
+        top_y = top_rel + y0
+        bottom_y = bottom_rel + y0
+        cx_full = cx + x0
+
+        diameter = None
+        smoothed = None
+        if bottom_y > top_y:
+            diameter = float(bottom_y - top_y)
+            self.diameter_history.append(diameter)
+            smoothed = float(np.mean(self.diameter_history))
+
+        # 5) Visualization overlay for debugging
+        debug = frame.copy()
+        cv2.rectangle(debug, (x0, y0), (x1, y1), (60, 60, 60), 1)
+
+        if smoothed is not None:
+            cv2.line(debug, (cx_full, top_y), (cx_full, bottom_y), (0,0,255), 2)
+            cv2.circle(debug, (cx_full, top_y), 4, (0,255,0), -1)
+            cv2.circle(debug, (cx_full, bottom_y), 4, (0,255,0), -1)
+            cv2.putText(debug, f"Diameter: {smoothed:.1f}px", (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255), 2)
+        else:
+            cv2.putText(debug, "Diameter: N/A", (20, 40),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+
+        return debug, smoothed
+
