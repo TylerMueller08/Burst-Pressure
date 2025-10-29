@@ -2,54 +2,82 @@ import cv2
 import threading
 import numpy as np
 from collections import deque
+import time
 
 class VideoLogger:
     def __init__(self, camIndex=0, smoothWindow=5):
+        self.camIndex = camIndex
         self.cam = cv2.VideoCapture(camIndex)
         self.frameWidth = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.frameHeight = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = self.cam.get(cv2.CAP_PROP_FPS) or 30
         self.out = None
-        self.recording = False
+
         self.latestDiameter = None
         self.lock = threading.Lock()
         self.diameter_history = deque(maxlen=smoothWindow)
 
-    def measureDiameter(self, frame):
-        _, diameter = self.process_frame(frame)
-        return diameter
+        self.stop_event = threading.Event()
+        self.thread = None
 
     def controlLoop(self):
-        while self.recording:
+        while not self.stop_event.is_set():
             ret, frame = self.cam.read()
             if not ret:
-                break
+                time.sleep(0.01)
+                continue
                 
             debug_frame, diameter = self.process_frame(frame)
 
             cv2.imshow("Debug Diameter", debug_frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
+                self.stop_event.set()
                 break
             
-            # diameter = self.measureDiameter(frame)
             with self.lock:
                 self.latestDiameter = diameter
 
             if self.out:
-                self.out.write(frame)
+                try:
+                    self.out.write(frame)
+                except Exception as e:
+                    print(f"Video Write Error: {e}")
+            
+        try:
+            if self.out:
+                self.out.release()
+        except Exception as e:
+            print(f"Error Releasing VideoWriter: {e}")
+        try:
+            self.cam.release()
+        except Exception as e:
+            print(f"Error Releasing Camera: {e}")
+        cv2.destroyAllWindows()
 
     def start(self, filename):
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         self.out = cv2.VideoWriter(filename, fourcc, self.fps, (self.frameWidth, self.frameHeight))
-        self.recording = True
-        threading.Thread(target=self.controlLoop, daemon=True).start()
+        self.stop_event.clear()
+        self.thread = threading.Thread(target=self.controlLoop, daemon=True)
+        self.thread.start()
 
-    def stop(self):
-        self.recording = False
-        if self.out:
-            self.out.release()
-        self.cam.release()
-        cv2.destroyAllWindows()
+    def stop(self, join_timeout=2.0):
+        self.stop_event.set()
+        if self.thread is not None:
+            self.thread.join(timeout=join_timeout)
+        if self.thread is None or not self.thread.is_alive():
+            try:
+                if self.out:
+                    self.out.release()
+            except Exception as e:
+                print(f"Error releasing out in stop: {e}")
+            try:
+                self.cam.release()
+            except Exception as e:
+                print(f"Error releasing cam in stop: {e}")
+            cv2.destroyAllWindows()
+        else:
+            print("Warning: VideoLogger thread did not stop within timeout.")
 
     def getLatestDiameter(self):
         with self.lock:
@@ -58,7 +86,6 @@ class VideoLogger:
     def process_frame(self, frame):
         border_ignore_frac = 0.12
         central_window_frac = 0.12
-        min_valid_columns = 5
 
         h, w = frame.shape[:2]
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)

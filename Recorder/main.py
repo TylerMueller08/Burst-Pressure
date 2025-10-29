@@ -4,8 +4,9 @@ from RecorderController import RecorderController
 controller = RecorderController()
 
 def toggleTrial():
+    button1.config(state="disabled")
     controller.toggle()
-    button1.config(text="Stop Trial" if controller.recording else "Start Trial")
+    button1.config(text="Stop Trial" if controller.recording else "Start Trial", state="normal")
 
 root = tk.Tk()
 root.title("Burst Pressure Manager")
