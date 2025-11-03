@@ -18,7 +18,7 @@ def create_csv(prefix, headers):
     file = open(filename, "w", newline="")
     writer = csv.writer(file)
     writer.writerow(headers)
-    log("Utils", f"Created file: {filename}")
+    log("Data Logger", f"Created file: {filename}")
     return file, writer
 
 def log(tag, message):

@@ -31,10 +31,3 @@ void closeRelays() {
   digitalWrite(RELAY_PRESSURE, HIGH);
   digitalWrite(RELAY_PUMP, HIGH);
 }
-
-// void toggleRelays() {
-//   state = !state;
-//   int relayState = state ? LOW : HIGH;
-//   digitalWrite(RELAY_PRESSURE, relayState);
-//   digitalWrite(RELAY_PUMP, relayState);
-// }

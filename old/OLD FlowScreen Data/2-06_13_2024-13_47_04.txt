@@ -1,0 +1,10 @@
+ 
+Results Sensor2
+06/13/2024 13:47:04
+Time[s];Pressure[psi]
+0.1;0.46
+0.2;0.46
+0.3;0.52
+0.4;0.40
+0.5;0.46
+No Limits selected

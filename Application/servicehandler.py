@@ -7,19 +7,20 @@ from serialhandler import SerialHandler, MockSerialHandler
 class ServiceHandler(QObject):
     def __init__(self):
         super().__init__()
-        self.relay = MockSerialHandler() or SerialHandler("COM5", 9600)
-        self.pressure = MockSerialHandler() or SerialHandler("COM4", 115200)
+        self.relay = SerialHandler("COM5", 9600)
+        self.pressure = SerialHandler("COM4", 115200)
         self.running = False
 
-        # Time-based Command Structure
+        # Time-Based Structure
         self.timer = QTimer()
         self.timer.setInterval(10)
         self.timer.timeout.connect(self.update)
 
-    @Slot()
-    def start(self):
         self.relay.connect()
         self.pressure.connect()
+
+    @Slot()
+    def start(self):
         self.relay.send("1") # Open Relays
 
         self.start_time = time.perf_counter()
@@ -34,14 +35,16 @@ class ServiceHandler(QObject):
 
     @Slot()
     def stop(self):
-        self.relay.send("2") # Close Relays
+        self.relay.send('2') # Close Relays
         self.timer.stop()
         self.data_logger.stop() # Stop Pressure Logging
         self.video_logger.stop() # Stop Video Recording
-        self.relay.disconnect()
-        self.pressure.disconnect()
         self.running = False
 
     def update(self):
         if self.running:
             self.data_logger.update()
+
+    def cleanup(self):
+        self.relay.disconnect()
+        self.pressure.disconnect()

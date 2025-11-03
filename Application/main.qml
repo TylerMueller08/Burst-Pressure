@@ -1,9 +1,10 @@
 import QtQuick
 import QtQuick.Controls
+import "themes"
 
 ApplicationWindow {
     visible: true
-    width: 480
+    width: 600
     height: 360
     title: "Burst Pressure Manager"
 
@@ -11,14 +12,35 @@ ApplicationWindow {
         anchors.fill: parent
         color: "#2b2b2b"
 
-        Text {
-            text: "Text"
+        Label {
+            text: "Burst Pressure Manager"
+            height: 60
+            anchors {
+                top: parent.top; topMargin: 60
+                horizontalCenter: parent.horizontalCenter
+            }
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font {
+                family: Theme.fontFamily
+                pointSize: Theme.titleFontSize
+                bold: true
+            }
         }
 
         Button {
-            text: checked ? "True" : "False"
+            text: checked ? "Stop" : "Start"
+            width: 160; height: 80
             checkable: true
-
+            anchors {
+                top: parent.top; topMargin: 180
+                horizontalCenter: parent.horizontalCenter
+            }
+            font {
+                family: Theme.fontFamily
+                pointSize: Theme.buttonFontSize
+                bold: true
+            }
             onCheckedChanged: {
                 if (checked) {
                     services.start()
@@ -27,5 +49,18 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    Label {
+        text: "Revised by Tyler Mueller (2025)"
+        anchors {
+            bottom: parent.bottom; bottomMargin: 8
+            horizontalCenter: parent.horizontalCenter
+        }
+        font {
+            family: Theme.fontFamily
+            pointSize: Theme.watermarkFontSize
+        }
+        opacity: 0.6
     }
 }

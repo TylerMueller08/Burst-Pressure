@@ -21,8 +21,8 @@ class SerialHandler:
 
     def send(self, command):
         if self.is_connected:
-            self.connection.write(command)
-            utils.log("Serial Handler", f"Sent Command: {command}!")
+            self.connection.write(command.encode())
+            utils.log("Serial Handler", f"Sent Command: {command} to {self.port} at {self.baudrate}")
 
     def read(self):
         if not self.is_connected:

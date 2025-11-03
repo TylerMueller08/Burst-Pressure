@@ -37,11 +37,12 @@ class VideoLogger:
                 break
 
             elapsed_label = f"Time: {utils.elapsed(self.start_time):.1f}s"
-            pressure_label = f"Pressure: {self.pressure_handler.read():.2f} PSI"
+            # pressure_label = f"Pressure: {self.pressure_handler.read():.2f}PSI"
+            pressure_label = "0.0 PSI"
 
             cv2.putText(frame, elapsed_label, (10, frame.shape[0]-30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
             cv2.putText(frame, pressure_label, (10, frame.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            
+
             self.out.write(frame)
             cv2.imshow("Video Debug", frame)
             if cv2.waitKey(1) & 0xFF == ord("q"):
