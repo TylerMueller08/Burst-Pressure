@@ -48,3 +48,21 @@ class ServiceHandler(QObject):
     def cleanup(self):
         self.relay.disconnect()
         self.pressure.disconnect()
+
+    @Slot()
+    def reload(self):
+        if self.relay.is_connected:
+            self.relay.disconnect()
+        if self.pressure.is_connected:
+            self.pressure.disconnect()
+
+        self.relay.connect()
+        self.pressure.connect()
+
+    @Slot(result=str)
+    def pressure_connected(self) -> str:
+        return "Connected" if self.pressure.is_connected else "Disconnected"
+
+    @Slot(result=str)
+    def relay_connected(self) -> str:
+        return "Connected" if self.relay.is_connected else "Disconnected"

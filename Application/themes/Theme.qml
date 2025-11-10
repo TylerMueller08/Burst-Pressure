@@ -7,5 +7,6 @@ QtObject {
 
     property int titleFontSize: 24
     property int buttonFontSize: 18
+    property int textFontSize: 14
     property int watermarkFontSize: 10
 }

@@ -28,12 +28,44 @@ ApplicationWindow {
             }
         }
 
+        Label {
+            id: pressureConnection
+            text: "Pressure " + services.pressure_connected()
+            height: 24
+            anchors {
+                top: parent.top; topMargin: 130
+                horizontalCenter: parent.horizontalCenter
+            }
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font {
+                family: Theme.fontFamily
+                pointSize: Theme.textFontSize
+            }
+        }
+
+        Label {
+            id: relayConnection
+            text: "Relay " + services.relay_connected()
+            height: 24
+            anchors {
+                top: parent.top; topMargin: 170
+                horizontalCenter: parent.horizontalCenter
+            }
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font {
+                family: Theme.fontFamily
+                pointSize: Theme.textFontSize
+            }
+        }
+
         Button {
             text: checked ? "Stop" : "Start"
             width: 160; height: 80
             checkable: true
             anchors {
-                top: parent.top; topMargin: 180
+                top: parent.top; topMargin: 225
                 horizontalCenter: parent.horizontalCenter
             }
             font {
@@ -47,6 +79,25 @@ ApplicationWindow {
                 } else {
                     services.stop()
                 }
+            }
+        }
+
+        Button {
+            text: "Refresh"
+            width: 110; height: 50
+            anchors {
+                left: parent.left; leftMargin: 6
+                bottom: parent.bottom; bottomMargin: 6
+            }
+            font {
+                family: Theme.fontFamily
+                pointSize: Theme.watermarkFontSize
+                bold: true
+            }
+            onClicked: {
+                services.reload()
+                pressureConnection.text = "Pressure " + services.pressure_connected()
+                relayConnection.text = "Relay " + services.relay_connected()
             }
         }
     }
