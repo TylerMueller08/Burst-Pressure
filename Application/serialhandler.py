@@ -12,7 +12,7 @@ class SerialHandler:
             self.connection = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
             utils.log("Serial Handler", f"Successfully connect to {self.port} at {self.baudrate}")
         except Exception as e:
-            utils.log("Serial Handler", f"Failed to connect to {self.port} at {self.baudrate}: {e}")
+            utils.log("Serial Handler", f"Failed to connect to {self.port} at {self.baudrate}")
 
     def disconnect(self):
         if self.is_connected:
@@ -35,10 +35,21 @@ class SerialHandler:
         except Exception as e:
             utils.log("Serial Handler", f"Failed to read {self.port} at {self.baudrate}: {e}")
             return None
-    
+
     @property
     def is_connected(self):
-        return self.connection and self.connection.is_open
+        if not self.connection:
+            return False
+        try:
+            self.connection.read(1)
+            return True
+        except Exception:
+            try:
+                self.connection.close()
+            except:
+                pass
+            self.connection = None
+            return False
 
 
 class MockSerialHandler:

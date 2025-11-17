@@ -3,6 +3,7 @@ import QtQuick.Controls
 import "themes"
 
 ApplicationWindow {
+    id: window
     visible: true
     width: 600
     height: 360
@@ -29,31 +30,12 @@ ApplicationWindow {
         }
 
         Label {
-            id: pressureConnection
-            text: "Pressure " + services.pressure_connected()
+            text: services.pressureStatus + "\n" + services.relayStatus
             height: 24
             anchors {
-                top: parent.top; topMargin: 130
-                horizontalCenter: parent.horizontalCenter
+                top: parent.bottom; bottomMargin: 5
+                left: parent.left; leftMargin: 5
             }
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            font {
-                family: Theme.fontFamily
-                pointSize: Theme.textFontSize
-            }
-        }
-
-        Label {
-            id: relayConnection
-            text: "Relay " + services.relay_connected()
-            height: 24
-            anchors {
-                top: parent.top; topMargin: 170
-                horizontalCenter: parent.horizontalCenter
-            }
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
             font {
                 family: Theme.fontFamily
                 pointSize: Theme.textFontSize
@@ -79,25 +61,6 @@ ApplicationWindow {
                 } else {
                     services.stop()
                 }
-            }
-        }
-
-        Button {
-            text: "Refresh"
-            width: 110; height: 50
-            anchors {
-                left: parent.left; leftMargin: 6
-                bottom: parent.bottom; bottomMargin: 6
-            }
-            font {
-                family: Theme.fontFamily
-                pointSize: Theme.watermarkFontSize
-                bold: true
-            }
-            onClicked: {
-                services.reload()
-                pressureConnection.text = "Pressure " + services.pressure_connected()
-                relayConnection.text = "Relay " + services.relay_connected()
             }
         }
     }
