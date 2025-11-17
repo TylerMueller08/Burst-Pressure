@@ -33,7 +33,7 @@ ApplicationWindow {
             text: services.pressureStatus + "\n" + services.relayStatus
             height: 24
             anchors {
-                top: parent.bottom; bottomMargin: 5
+                bottom: parent.bottom; bottomMargin: 25
                 left: parent.left; leftMargin: 5
             }
             font {
