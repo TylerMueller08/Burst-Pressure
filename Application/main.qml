@@ -29,27 +29,10 @@ ApplicationWindow {
         }
 
         Label {
-            id: pressureConnection
-            text: "Pressure " + services.pressure_connected()
-            height: 24
+            id: connectionIndicator
+            text: (services.pressure_connected() ? "Pressure: Connected" : "Pressure: Disconnected") + "\n" + (services.relay_connected() ? "Relay: Connected" : "Relay: Disconnected")
             anchors {
-                top: parent.top; topMargin: 130
-                horizontalCenter: parent.horizontalCenter
-            }
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            font {
-                family: Theme.fontFamily
-                pointSize: Theme.textFontSize
-            }
-        }
-
-        Label {
-            id: relayConnection
-            text: "Relay " + services.relay_connected()
-            height: 24
-            anchors {
-                top: parent.top; topMargin: 170
+                top: parent.top; topMargin: 150
                 horizontalCenter: parent.horizontalCenter
             }
             horizontalAlignment: Text.AlignHCenter
@@ -61,11 +44,27 @@ ApplicationWindow {
         }
 
         Button {
-            text: checked ? "Stop" : "Start"
-            width: 160; height: 80
-            checkable: true
+            width: 65; height: 75
             anchors {
-                top: parent.top; topMargin: 225
+                left: parent.left; leftMargin: 8
+                bottom: parent.bottom; bottomMargin: 5
+            }
+            
+            icon.source: "themes/images/refresh.png"
+            icon.height: 30; icon.width: 30
+
+            onClicked: {
+                services.reconnect()
+            }
+        }
+
+        Button {
+            text: checked ? "Stop" : "Start"
+            width: 160; height: 70
+            checkable: true
+            enabled: services.pressure_connected() && services.relay_connected()
+            anchors {
+                bottom: parent.bottom; bottomMargin: 60
                 horizontalCenter: parent.horizontalCenter
             }
             font {
@@ -79,25 +78,6 @@ ApplicationWindow {
                 } else {
                     services.stop()
                 }
-            }
-        }
-
-        Button {
-            text: "Refresh"
-            width: 110; height: 50
-            anchors {
-                left: parent.left; leftMargin: 6
-                bottom: parent.bottom; bottomMargin: 6
-            }
-            font {
-                family: Theme.fontFamily
-                pointSize: Theme.watermarkFontSize
-                bold: true
-            }
-            onClicked: {
-                services.reload()
-                pressureConnection.text = "Pressure " + services.pressure_connected()
-                relayConnection.text = "Relay " + services.relay_connected()
             }
         }
     }

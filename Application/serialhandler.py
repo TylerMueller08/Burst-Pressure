@@ -38,7 +38,18 @@ class SerialHandler:
     
     @property
     def is_connected(self):
-        return self.connection and self.connection.is_open
+        if not self.connection:
+            return False
+        try:
+            self.connection.read(1)
+            return True
+        except Exception:
+            try:
+                self.connection.close()
+            except:
+                pass
+            self.connection = None
+            return False
 
 
 class MockSerialHandler:

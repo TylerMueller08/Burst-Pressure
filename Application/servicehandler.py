@@ -1,10 +1,12 @@
 import time
-from PySide6.QtCore import QTimer, QObject, Slot
+from PySide6.QtCore import QTimer, QObject, Slot, Signal
 from datalogger import DataLogger
 from videologger import VideoLogger
 from serialhandler import SerialHandler, MockSerialHandler
 
 class ServiceHandler(QObject):
+    connectionIndicator = Signal()
+
     def __init__(self):
         super().__init__()
         self.relay = SerialHandler("COM5", 9600)
@@ -50,19 +52,18 @@ class ServiceHandler(QObject):
         self.pressure.disconnect()
 
     @Slot()
-    def reload(self):
-        if self.relay.is_connected:
-            self.relay.disconnect()
-        if self.pressure.is_connected:
-            self.pressure.disconnect()
+    def reconnect(self):
+        for device in (self.relay, self.pressure):
+            if device.is_connected:
+                device.disconnect()
+            device.connect()
 
-        self.relay.connect()
-        self.pressure.connect()
+        self.connectionIndicator.emit()
 
-    @Slot(result=str)
-    def pressure_connected(self) -> str:
-        return "Connected" if self.pressure.is_connected else "Disconnected"
+    @Slot(result=bool)
+    def pressure_connected(self) -> bool:
+        return self.pressure.is_connected
 
-    @Slot(result=str)
-    def relay_connected(self) -> str:
-        return "Connected" if self.relay.is_connected else "Disconnected"
+    @Slot(result=bool)
+    def relay_connected(self) -> bool:
+        return self.relay.is_connected
