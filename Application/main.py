@@ -11,7 +11,7 @@ def main():
 
     services = ServiceHandler()
     engine.rootContext().setContextProperty("services", services)
-    app.aboutToQuit.connect(services.cleanup)
+    app.aboutToQuit.connect(services.disconnect)
 
     engine.load("main.qml")
     if not engine.rootObjects():

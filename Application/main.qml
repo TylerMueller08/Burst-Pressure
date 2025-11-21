@@ -9,6 +9,11 @@ ApplicationWindow {
     height: 360
     title: "Burst Pressure Manager"
 
+    Component.onCompleted: {
+        services.reconnect()
+        services.launchCamera()
+    }
+
     Rectangle {
         anchors.fill: parent
         color: "#2b2b2b"
@@ -30,24 +35,75 @@ ApplicationWindow {
         }
 
         Label {
-            text: services.pressureStatus + "\n" + services.relayStatus
-            height: 24
+            id: pressureIndicator
+            text: "Pressure: N/A"
             anchors {
-                bottom: parent.bottom; bottomMargin: 25
-                left: parent.left; leftMargin: 5
+                top: parent.top; topMargin: 130
+                horizontalCenter: parent.horizontalCenter
             }
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
             font {
                 family: Theme.fontFamily
                 pointSize: Theme.textFontSize
             }
         }
 
+        Label {
+            id: relayIndicator
+            text: "Relay: N/A"
+            anchors {
+                top: parent.top; topMargin: 150
+                horizontalCenter: parent.horizontalCenter
+            }
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font {
+                family: Theme.fontFamily
+                pointSize: Theme.textFontSize
+            }
+        }
+
+        TextField {
+            id: nameField
+            placeholderText: "Identifier"
+            width: 225; height: 35
+            anchors {
+                bottom: parent.bottom; bottomMargin: 125
+                horizontalCenter: parent.horizontalCenter
+            }
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            font {
+                family: Theme.fontFamily
+                pointSize: Theme.inputFontSize
+            }
+            selectionColor: "#FFFFFF"
+            cursorVisible: true
+        }
+
         Button {
+            width: 65; height: 75
+            anchors {
+                left: parent.left; leftMargin: 8
+                bottom: parent.bottom; bottomMargin: 5
+            }
+            
+            icon.source: "themes/images/refresh.png"
+            icon.height: 30; icon.width: 30
+
+            onClicked: {
+                services.reconnect()
+            }
+        }
+
+        Button {
+            id: startButton
             text: checked ? "Stop" : "Start"
-            width: 160; height: 80
+            width: 165; height: 60
             checkable: true
             anchors {
-                top: parent.top; topMargin: 225
+                bottom: parent.bottom; bottomMargin: 50
                 horizontalCenter: parent.horizontalCenter
             }
             font {
@@ -76,5 +132,20 @@ ApplicationWindow {
             pointSize: Theme.watermarkFontSize
         }
         opacity: 0.6
+    }
+
+    Connections {
+        target: services
+        function onPressureUpdated(connected) {
+            pressureIndicator.text = "Pressure: " + (connected ? "Connected" : "Disconnected")
+        }
+
+        function onRelayUpdated(connected) {
+            relayIndicator.text = "Relay: " + (connected ? "Connected" : "Disconnected")
+        }
+
+        function onConnected(connected) {
+            startButton.enabled = connected
+        }
     }
 }

@@ -10,7 +10,7 @@ class SerialHandler:
     def connect(self):
         try:
             self.connection = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
-            utils.log("Serial Handler", f"Successfully connect to {self.port} at {self.baudrate}")
+            utils.log("Serial Handler", f"Successfully connected to {self.port} at {self.baudrate}")
         except Exception as e:
             utils.log("Serial Handler", f"Failed to connect to {self.port} at {self.baudrate}")
 
