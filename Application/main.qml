@@ -11,7 +11,7 @@ ApplicationWindow {
 
     Component.onCompleted: {
         services.reconnect()
-        // services.launchCamera()
+        services.launchCamera()
     }
 
     Rectangle {
@@ -66,7 +66,7 @@ ApplicationWindow {
 
         TextField {
             id: nameField
-            placeholderText: "Identifier"
+            placeholderText: "Prefix"
             width: 225; height: 40
             text: "Unlabeled"
             anchors {
@@ -146,7 +146,7 @@ ApplicationWindow {
         }
 
         function onConnected(connected) {
-            //startButton.enabled = connected
+            startButton.enabled = connected
         }
     }
 }

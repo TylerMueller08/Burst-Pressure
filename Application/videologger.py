@@ -20,7 +20,7 @@ class VideoLogger:
         fps = int(self.capture.get(cv2.CAP_PROP_FPS)) or 30
 
         utils.ensure_dir("data")
-        filename = f"data/{prefix}_{utils.timestamp()}.mp4"
+        filename = f"data\{prefix}_{utils.timestamp()}.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         self.out = cv2.VideoWriter(filename, fourcc, fps, (width, height))
         utils.log("Video Logger", f"Recording Started: {filename}")

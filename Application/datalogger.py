@@ -12,7 +12,6 @@ class DataLogger:
     def start(self, prefix):
         self.file, self.writer = utils.create_csv(prefix, ["Elapsed Time [s]", "Pressure [PSI]"])
         self.next_time = self.interval
-        utils.log("Data Logger", "Recording Started")
 
     def update(self):
         if not self.file:

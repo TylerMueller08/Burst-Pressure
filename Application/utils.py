@@ -18,11 +18,11 @@ def create_csv(prefix, headers):
     file = open(filename, "w", newline="")
     writer = csv.writer(file)
     writer.writerow(headers)
-    log("Data Logger", f"Created file: {filename}")
+    log("Data Logger", f"Recording Started: {filename}")
     return file, writer
 
 def log(tag, message):
     print(f"[{tag} | {timestamp("%H:%M:%S")}] {message}")
 
 def warn(tag, message):
-    print(f"\033[91m[{tag} | {timestamp("%H: %M: %S")}] {message}\033[0m")
+    print(f"\033[91m[{tag} | {timestamp("%H:%M:%S")}] {message}\033[0m")
