@@ -1,8 +1,7 @@
 import cv2, time, threading, utils
 
 class VideoLogger:
-    def __init__(self, prefix="Unlabeled", pressure_handler=None, start_time=None):
-        self.prefix = prefix
+    def __init__(self, pressure_handler=None, start_time=None):
         self.start_time = start_time
         self.pressure_handler = pressure_handler
         self.capture = None
@@ -10,7 +9,7 @@ class VideoLogger:
         self.thread = None
         self.running = False
 
-    def start(self):
+    def start(self, prefix):
         self.capture = cv2.VideoCapture(0)
         if not self.capture.isOpened():
             utils.log("Video Logger", "No camera found")
@@ -21,7 +20,7 @@ class VideoLogger:
         fps = int(self.capture.get(cv2.CAP_PROP_FPS)) or 30
 
         utils.ensure_dir("data")
-        filename = f"data/{self.prefix}_{utils.timestamp()}.mp4"
+        filename = f"data/{prefix}_{utils.timestamp()}.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         self.out = cv2.VideoWriter(filename, fourcc, fps, (width, height))
         utils.log("Video Logger", f"Recording Started: {filename}")

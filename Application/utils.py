@@ -23,3 +23,6 @@ def create_csv(prefix, headers):
 
 def log(tag, message):
     print(f"[{tag} | {timestamp("%H:%M:%S")}] {message}")
+
+def warn(tag, message):
+    print(f"\033[91m[{tag} | {timestamp("%H: %M: %S")}] {message}\033[0m")

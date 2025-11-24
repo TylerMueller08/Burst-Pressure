@@ -1,17 +1,16 @@
 import utils
 
 class DataLogger:
-    def __init__(self, prefix="Unlabeled", interval=0.1, pressure_handler=None, start_time=None):
-        self.prefix = prefix
-        self.interval = interval
+    def __init__(self, pressure_handler=None, start_time=None):
         self.file = None
         self.writer = None
         self.next_time = None
         self.start_time = start_time
         self.pressure_handler = pressure_handler
+        self.interval = 0.1
         
-    def start(self):
-        self.file, self.writer = utils.create_csv(self.prefix, ["Elapsed Time [s]", "Pressure [PSI]"])
+    def start(self, prefix):
+        self.file, self.writer = utils.create_csv(prefix, ["Elapsed Time [s]", "Pressure [PSI]"])
         self.next_time = self.interval
         utils.log("Data Logger", "Recording Started")
 
