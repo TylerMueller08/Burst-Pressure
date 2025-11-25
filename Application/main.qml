@@ -26,7 +26,8 @@ Window {
         verticalAlignment: Text.AlignVCenter
         font {
             family: Theme.fontFamily
-            pointSize: Theme.titleFontSize
+	    pointSize: Theme.titleFontSize
+	    bold: true
         }
     }
 

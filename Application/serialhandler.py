@@ -12,7 +12,7 @@ class SerialHandler:
             self.connection = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
             utils.log("Serial Handler", f"Successfully connected to {self.port} at {self.baudrate}")
         except Exception as e:
-            utils.warn("Serial Handler", f"Failed to connect to {self.port} at {self.baudrate}")
+            utils.log("Serial Handler", f"Failed to connect to {self.port} at {self.baudrate}")
 
     def disconnect(self):
         if self.is_connected:
@@ -33,7 +33,7 @@ class SerialHandler:
             nums = [float(n) for n in re.findall(r"[-+]?\d*\.\d+|[-+]?\d+", line)]
             return nums[-1] if nums else None
         except Exception as e:
-            utils.warn("Serial Handler", f"Failed to read {self.port} at {self.baudrate}: {e}")
+            utils.log("Serial Handler", f"Failed to read {self.port} at {self.baudrate}: {e}")
             return None
 
     @property
