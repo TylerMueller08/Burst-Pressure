@@ -1,4 +1,4 @@
-import cv2, time, threading, utils
+import cv2, threading, utils
 
 class VideoLogger:
     def __init__(self, pressure_handler=None, start_time=None):
@@ -37,7 +37,7 @@ class VideoLogger:
 
             elapsed_label = f"Time: {utils.elapsed(self.start_time):.1f}s"
             # pressure_label = f"Pressure: {self.pressure_handler.read():.2f}PSI"
-            pressure_label = "0.0 PSI"
+            pressure_label = "N/A PSI"
 
             cv2.putText(frame, elapsed_label, (10, frame.shape[0]-30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
             cv2.putText(frame, pressure_label, (10, frame.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)

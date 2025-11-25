@@ -1,4 +1,4 @@
-import serial, random, re, utils
+import serial, re, utils
 
 class SerialHandler:
     def __init__(self, port, baudrate, timeout=1):
@@ -50,17 +50,3 @@ class SerialHandler:
                 pass
             self.connection = None
             return False
-
-
-class MockSerialHandler:
-    def connect(self):
-        utils.log("Mock Serial Handler", "Connected")
-
-    def disconnect(self):
-        utils.log("Mock Serial Handler", "Disconnected")
-
-    def send(self, command):
-        utils.log("Mock Serial Handler", f"Sent Command: {command}")
-
-    def read(self):
-        return random.uniform(0.0, 16.0)

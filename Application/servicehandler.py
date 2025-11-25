@@ -2,7 +2,7 @@ import time, os, utils
 from PySide6.QtCore import QTimer, QObject, Slot, Signal
 from datalogger import DataLogger
 from videologger import VideoLogger
-from serialhandler import SerialHandler, MockSerialHandler
+from serialhandler import SerialHandler
 
 class ServiceHandler(QObject):
     pressureUpdated = Signal(bool)
@@ -23,12 +23,9 @@ class ServiceHandler(QObject):
     @Slot(str)
     def start(self, prefix):
         self.relay.send("1") # Open Relays
-
         self.start_time = time.perf_counter()
-
         self.data_logger = DataLogger(pressure_handler=self.pressure, start_time=self.start_time)
         self.video_logger = VideoLogger(pressure_handler=self.pressure, start_time=self.start_time)
-
         self.data_logger.start(prefix) # Start Pressure Logging
         self.video_logger.start(prefix) # Start Video Logging
         self.running = True
@@ -36,7 +33,7 @@ class ServiceHandler(QObject):
 
     @Slot()
     def stop(self):
-        self.relay.send('2') # Close Relays
+        self.relay.send("2") # Close Relays
         self.timer.stop()
         self.data_logger.stop() # Stop Pressure Logging
         self.video_logger.stop() # Stop Video Recording
