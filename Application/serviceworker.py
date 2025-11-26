@@ -2,7 +2,7 @@ import cv2, csv
 import time, os, utils
 from PySide6.QtCore import QThread
 
-class CaptureWorker(QThread):
+class ServiceWorker(QThread):
     def __init__(self, pressure_handler=None, start_time=None, prefix="Unlabeled", fps=10):
         super().__init__()
         self.pressure_handler = pressure_handler
@@ -29,7 +29,7 @@ class CaptureWorker(QThread):
 
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
-            utils.log("Capture Worker", "No camera found")
+            utils.log("Service Worker", "No camera found")
             return
 
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -41,8 +41,8 @@ class CaptureWorker(QThread):
             self.fps,
             (width, height))
 
-        utils.log("Capture Worker", f"Video Recording Started at {video_file}")
-        utils.log("Capture Worker", f"CSV Recording Started at {csv_file}")
+        utils.log("Service Worker", f"Video Recording Started at {video_file}")
+        utils.log("Service Worker", f"CSV Recording Started at {csv_file}")
 
         elapsed = time.perf_counter() - self.start_time
 
@@ -69,7 +69,7 @@ class CaptureWorker(QThread):
         out.release()
         csvf.close()
 
-        utils.log("Capture Worker", "Recording Stopped")
+        utils.log("Service Worker", "Recording Stopped")
 
     def stop(self):
         self.running = False

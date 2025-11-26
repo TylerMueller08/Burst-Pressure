@@ -3,59 +3,53 @@ import QtQuick.Controls
 import "themes"
 
 Item {
-    id: mainScreen
     visible: true
-
     signal goToMainScreen()
-    signal goToCaptureScreen()
+    signal goToRecordScreen()
     signal goToAnalysisScreen()
 
     Label {
         text: "Please select an option below to proceed:"
         anchors {
-            top: parent.top; topMargin: 200
+            top: parent.top
+            topMargin: 250
             horizontalCenter: parent.horizontalCenter
         }
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
         font {
             family: Theme.fontFamily
-            pointSize: Theme.headerFontSize
+            pointSize: Theme.headerSize
         }
     }
 
     Row {
+        spacing: 40
         anchors {
-            bottom: parent.bottom; bottomMargin: 125
+            bottom: parent.bottom
+            bottomMargin: 150
             horizontalCenter: parent.horizontalCenter
         }
-        spacing: 40
         
         Button {
-            id: captureButton
-            text: "Capture"
+            id: recordButton
             width: 225; height: 70
+            text: "Record"
             font {
                 family: Theme.fontFamily
-                pointSize: Theme.buttonFontSize
+                pointSize: Theme.buttonSize
             }
-            onClicked: {
-                goToCaptureScreen()
-            }
+            onClicked: { goToRecordScreen() }
             HoverHandler { cursorShape: Qt.PointingHandCursor }
         }
 
         Button {
             id: analysisButton
-            text: "Analysis"
             width: 225; height: 70
+            text: "Analysis"
             font {
                 family: Theme.fontFamily
-                pointSize: Theme.buttonFontSize
+                pointSize: Theme.buttonSize
             }
-            onClicked: {
-                goToAnalysisScreen()
-            }
+            onClicked: { goToAnalysisScreen() }
             HoverHandler { cursorShape: Qt.PointingHandCursor }
         }
     }

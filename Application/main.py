@@ -4,13 +4,14 @@ from PySide6.QtQml import QQmlApplicationEngine
 from servicehandler import ServiceHandler
 
 def main():
-    os.environ["QT_QUICK_CONTROLS_CONF"] = os.path.join(os.path.dirname(__file__), "screens/themes/qtquickcontrols2.conf")
+    os.environ["QT_QUICK_CONTROLS_STYLE"] = "Material"
+    os.environ["QT_QUICK_CONTROLS_MATERIAL_THEME"] = "Dark"
 
     app = QApplication(sys.argv)
     engine = QQmlApplicationEngine()
 
     services = ServiceHandler()
-    engine.rootContext().setContextProperty("services", services)
+    engine.rootContext().setContextProperty("Services", services)
     app.aboutToQuit.connect(services.disconnect)
 
     engine.load("main.qml")

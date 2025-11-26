@@ -1,4 +1,3 @@
-import os, time, csv
 from datetime import datetime
 
 def timestamp(format="%m-%d-%Y_%H-%M-%S"):
