@@ -1,6 +1,6 @@
-import cv2, csv
-import time, os, utils
 from PySide6.QtCore import QThread
+import os, utils
+import cv2, csv
 
 class ServiceWorker(QThread):
     def __init__(self, pressure_handler=None, start_time=None, prefix="Unlabeled", fps=10):
@@ -43,8 +43,6 @@ class ServiceWorker(QThread):
 
         utils.log("Service Worker", f"Video Recording Started at {video_file}")
         utils.log("Service Worker", f"CSV Recording Started at {csv_file}")
-
-        elapsed = time.perf_counter() - self.start_time
 
         while self.running:
             ret, frame = cap.read()
