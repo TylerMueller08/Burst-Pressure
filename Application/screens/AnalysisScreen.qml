@@ -13,42 +13,31 @@ Item {
 
     property string csvFilePath: ""
     property string videoFilePath: ""
+    property bool filesReady: csvFilePath === "" && videoFilePath === ""
 
-    Row {
-        spacing: 20
-        anchors {
-            horizontalCenter: parent.horizontalCenter
-            verticalCenter: parent.verticalCenter
+    Button {
+        id: folderButton
+	width: 250; height: 70
+	text: filesReady ? "Upload Folder" : "Folder Loaded"
+	enabled: filesReady
+	anchors {
+            top: parent.top
+	    topMargin: 200
+	    horizontalCenter: parent.horizontalCenter
+	}
+	font {
+            family: Theme.fontFamily
+	    pointSize: Theme.inputSize
         }
-        Button {
-            id: videoButton
-            width: 250; height: 70
-            text: videoFilePath === "" ? "Upload Video" : "Video Ready"
-            font {
-                family: Theme.fontFamily
-                pointSize: Theme.inputSize
-            }
-            onClicked: Analysis.select_video()
-            HoverHandler { cursorShape: Qt.PointingHandCursor }
-        }
-        Button {
-            id: csvButton
-            width: 250; height: 70
-            text: csvFilePath === "" ? "Upload CSV" : "CSV Ready"
-            font {
-                family: Theme.fontFamily
-                pointSize: Theme.inputSize
-            }
-            onClicked: Analysis.select_csv()
-            HoverHandler { cursorShape: Qt.PointingHandCursor }
-        }
+        onClicked: Analysis.select_folder()
+	HoverHandler { cursorShape: Qt.PointingHandCursor }
     }
 
     Button {
         id: runButton
         width: 225; height: 75
         text: "Run"
-        enabled: csvFilePath !== "" && videoFilePath !== ""
+        enabled: !filesReady
         anchors {
             bottom: parent.bottom
             bottomMargin: 50
@@ -79,14 +68,8 @@ Item {
     }
 
     Connections {
-        target: Analysis
-        function onVideoUpdated(file) {
-            videoButton.enabled = false
-            videoFilePath = file
-        }
-        function onCsvUpdated(file) {
-            csvButton.enabled = false
-            csvFilePath = file
-        }
+	target: Analysis
+        function onVideoUpdated(file) { videoFilePath = file }
+        function onCsvUpdated(file) { csvFilePath = file }
     }
 }

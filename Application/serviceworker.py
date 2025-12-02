@@ -19,9 +19,11 @@ class ServiceWorker(QThread):
         super().start()
 
     def run(self):
-        os.makedirs("data", exist_ok=True)
-        video_file = f"data/{self.prefix}_{utils.timestamp()}.mp4"
-        csv_file = f"data/{self.prefix}_{utils.timestamp()}.csv"
+        folder = f"data/{self.prefix}_{utils.timestamp()}"
+        os.makedirs(folder, exist_ok=True)
+
+        video_file = f"{folder}/{self.prefix}_VIDEO.mp4"
+        csv_file = f"{folder}/{self.prefix}_DATA.csv"
         
         csvf = open(csv_file, "w", newline="")
         writer = csv.writer(csvf)

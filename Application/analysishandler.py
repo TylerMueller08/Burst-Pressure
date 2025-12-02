@@ -21,16 +21,30 @@ class AnalysisHandler(QObject):
         self.worker.start()
 
     @Slot()
-    def select_csv(self):
-        file, _ = QFileDialog.getOpenFileName(None, "Select CSV", "", "CSV Files (*.csv)")
-        if file:
-            utils.log("Analysis Handler", f"Successfully selected CSV: {file}")
-            self.csvUpdated.emit(file)
+    def select_folder(self):
+        folder = QFileDialog.getExistingDirectory(None, "Select Folder Containing Video and CSV")
+        if not folder:
+            return
 
-    @Slot()
-    def select_video(self):
-        file, _ = QFileDialog.getOpenFileName(None, "Select Video", "", "Video Files (*.mp4)")
-        if file:
-            utils.log("Analysis Handler", f"Successfully selected video: {file}")
-            self.videoUpdated.emit(file)
+        import os
+        csv_path = None
+        video_path = None
 
+        for file in os.listdir(folder):
+            lower = file.lower()
+            if lower.endswith(".csv"):
+                csv_path = os.path.join(folder, file)
+            elif lower.endswith(".mp4"):
+                video_path = os.path.join(folder, file)
+
+        if csv_path:
+            utils.log("Analysis Handler", f"Successfully selected CSV: {csv_path}")
+            self.csvUpdated.emit(csv_path)
+        else:
+            utils.log("Analysis Handler", "Failed to find a CSV file in the selected folder.")
+
+        if video_path:
+            utils.log("Analysis Handler", f"Successfully selected Video: {video_path}")
+            self.videoUpdated.emit(video_path)
+        else:
+            utils.log("Analysis Handler", "Failed to find a Video file in the selected folder.")
