@@ -23,7 +23,7 @@ Item {
         Button {
             id: videoButton
             width: 250; height: 70
-            text: videoFilePath === "" ? "Upload Video" : "Video Selected"
+            text: videoFilePath === "" ? "Upload Video" : "Video Ready"
             font {
                 family: Theme.fontFamily
                 pointSize: Theme.inputSize
@@ -34,7 +34,7 @@ Item {
         Button {
             id: csvButton
             width: 250; height: 70
-            text: csvFilePath === "" ? "Upload CSV" : "CSV Selected"
+            text: csvFilePath === "" ? "Upload CSV" : "CSV Ready"
             font {
                 family: Theme.fontFamily
                 pointSize: Theme.inputSize

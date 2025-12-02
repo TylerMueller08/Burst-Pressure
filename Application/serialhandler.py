@@ -54,7 +54,7 @@ class SerialHandler:
         if not self.connection or not self.connection.is_open:
             return False
         try:
-            self.connection.write(b"")
+            self.connection.write(b"\x01")
             return True
         except:
             self.drop()
