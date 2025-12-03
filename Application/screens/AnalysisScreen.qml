@@ -15,28 +15,41 @@ Item {
     property string videoFilePath: ""
     property bool filesReady: csvFilePath === "" && videoFilePath === ""
 
-    Button {
-        id: folderButton
-	width: 250; height: 70
-	text: filesReady ? "Upload Folder" : "Folder Loaded"
-	enabled: filesReady
-	anchors {
+    Label {
+        text: "Select the folder with the video and data files:"
+        anchors {
             top: parent.top
-	    topMargin: 200
-	    horizontalCenter: parent.horizontalCenter
-	}
-	font {
-            family: Theme.fontFamily
-	    pointSize: Theme.inputSize
+            topMargin: 250
+            horizontalCenter: parent.horizontalCenter
         }
-        onClicked: Analysis.select_folder()
-	HoverHandler { cursorShape: Qt.PointingHandCursor }
+        font {
+            family: Theme.fontFamily
+            pointSize: Theme.headerSize
+        }
     }
 
     Button {
-        id: runButton
+        id: folderButton
+        width: 250; height: 70
+        text: filesReady ? "Upload Folder" : "Folder Loaded"
+        enabled: filesReady
+        anchors {
+            bottom: parent.bottom
+            bottomMargin: 160
+            horizontalCenter: parent.horizontalCenter
+        }
+        font {
+            family: Theme.fontFamily
+            pointSize: Theme.inputSize
+        }
+        onClicked: Analysis.select_folder()
+        HoverHandler { cursorShape: Qt.PointingHandCursor }
+    }
+
+    Button {
+        id: startButton
         width: 225; height: 75
-        text: "Run"
+        text: "Start"
         enabled: !filesReady
         anchors {
             bottom: parent.bottom
