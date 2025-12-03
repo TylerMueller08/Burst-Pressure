@@ -27,7 +27,7 @@ class ServiceWorker(QThread):
         
         csvf = open(csv_file, "w", newline="")
         writer = csv.writer(csvf)
-        writer.writerow(["Elapsed Time (s)", "Pressure (PSI)"])
+        writer.writerow(["Elapsed Time [s]", "Pressure [PSI]"])
 
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():

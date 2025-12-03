@@ -1,5 +1,6 @@
 from PySide6.QtCore import QThread
 from ultralytics import YOLO
+import matplotlib.pyplot as plt
 import pandas as pd
 import cv2, utils
 
@@ -65,7 +66,7 @@ class AnalysisWorker(QThread):
                 else:
                     diameter_list.append(diameter)
 
-                utils.log("Analysis Worker", f"Processed frame {frame_index}/{total_frames}")
+                utils.log("Analysis Worker", f"Processed Frame {frame_index}/{total_frames}")
 
             vid.release()
             writer.release()
@@ -88,7 +89,7 @@ class AnalysisWorker(QThread):
         debug = frame.copy()
 
         if results.masks is None or len(results.masks) == 0:
-            cv2.putText(debug, "Height: N/A", (425, debug.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(debug, "Diameter: N/A", (425, debug.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
             return debug, None
 
         confs = results.boxes.conf.cpu().numpy()
