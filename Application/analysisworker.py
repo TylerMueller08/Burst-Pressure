@@ -1,8 +1,9 @@
 from PySide6.QtCore import QThread
 from ultralytics import YOLO
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-import cv2, utils
+import cv2, os, utils
 
 class AnalysisWorker(QThread):
     def __init__(self, csv_path, video_path):
@@ -28,7 +29,7 @@ class AnalysisWorker(QThread):
             if not vid.isOpened():
                 utils.log("Analysis Worker", "Failed to open video")
                 return
-            
+
             fps = vid.get(cv2.CAP_PROP_FPS)
             width = int(vid.get(cv2.CAP_PROP_FRAME_WIDTH))
             height = int(vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -38,8 +39,16 @@ class AnalysisWorker(QThread):
             utils.log("Analysis Worker", f"Resolution: {width}x{height}")
             utils.log("Analysis Worker", f"Total Frames: {total_frames}")
 
-            output_video = self.video_path.replace(".mp4", "_PROCESSED.mp4")
-            output_csv = self.csv_path.replace(".csv", "_PROCESSED.csv")
+            file_dir = os.path.dirname(self.video_path)
+            processed_dir = os.path.join(file_dir, "processed")
+
+            os.makedirs(processed_dir, exist_ok=True)
+
+            video_name = os.path.basename(self.video_path).replace(".mp4", "_PROCESSED.mp4")
+            csv_name = os.path.basename(self.csv_path).replace(".csv", "_PROCESSED.csv")
+
+            output_video = os.path.join(processed_dir, video_name)
+            output_csv = os.path.join(processed_dir, csv_name)
 
             writer = cv2.VideoWriter(
                 output_video,
@@ -57,7 +66,7 @@ class AnalysisWorker(QThread):
                     break
 
                 frame_index += 1
-                
+
                 processed_frame, diameter = self.process_frame(frame)
                 writer.write(processed_frame)
 
@@ -66,13 +75,44 @@ class AnalysisWorker(QThread):
                 else:
                     diameter_list.append(diameter)
 
-                utils.log("Analysis Worker", f"Processed Frame {frame_index}/{total_frames}")
+                percent_complete = (frame_index / total_frames) * 100
+                utils.log("Analysis Worker", f"Processed Frame {frame_index}/{total_frames} ({percent_complete:.2f}%)")
 
             vid.release()
             writer.release()
 
             df["Diameter [px]"] = diameter_list[:len(df)]
             df.to_csv(output_csv, index=False)
+
+            # Stress-Strain (Needs work)
+            internal_diameter = 1 / 16 # Inches
+            wall_thickness = 1 / 32 # Inches
+            pxiels_to_inches = 0.125 / 185
+
+            df = pd.read_csv(output_csv)
+            pressure = df["Pressure [PSI]"].astype(float)
+            diameter = df["Diameter [px]"].astype(float)
+            initial_diameter = diameter.iloc[0]
+
+            df["Stress"] = (pressure * diameter) / (2 * wall_thickness)
+            df["Strain"] = (diameter - initial_diameter) / initial_diameter
+
+            df["True_Strain"] = np.log(1 + df["Strain"])
+            df["True_Stress"] = df["Stress"] * (1 + df["Strain"])
+
+            df_sorted = df.sort_values("True_Strain")
+
+            plt.figure(figsize=(8, 5))
+            plt.plot(df_sorted["True_Strain"], df_sorted["True_Stress"], linewidth=2)
+            plt.xlabel("log Strain")
+            plt.ylabel("log Stress")
+            plt.title("Stress-Strain Curve")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.savefig(os.path.join(processed_dir, "stress_strain_plot"), dpi=300)
+
+            strain_name = os.path.basename(self.csv_path).replace(".csv", "_STRAIN.csv")
+            df.to_csv(os.path.join(processed_dir, strain_name))
 
             utils.log("Analysis Worker", "Analysis Completed")
             utils.log("Analysis Worker", f"Output CSV: {output_csv}")
