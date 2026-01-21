@@ -25,7 +25,7 @@ Window {
     }
 
     Label {
-        text: "Adapted by Tyler Mueller (2025)"
+        text: "Revised by Tyler Mueller (2026)"
         anchors {
             bottom: parent.bottom
             bottomMargin: 8

@@ -12,8 +12,6 @@ class AnalysisWorker(QThread):
         self.running = False
         self.diameter_history = []
 
-        self.model = YOLO("pipe.pt")
-
     def start(self):
         self.running = True
         super().start()
@@ -82,59 +80,104 @@ class AnalysisWorker(QThread):
             utils.log("Analysis Worker", f"Error: {e}")
 
     def process_frame(self, frame):
-        import cv2
         import numpy as np
+        import cv2
 
-        results = self.model(frame, verbose=False)[0]
         debug = frame.copy()
 
-        if results.masks is None or len(results.masks) == 0:
-            cv2.putText(debug, "Diameter: N/A", (425, debug.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            return debug, None
+        # Convert to grayscale.
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        confs = results.boxes.conf.cpu().numpy()
-        best_idx = int(np.argmax(confs))
-        mask = results.masks.data[best_idx].cpu().numpy().astype(np.uint8)
+        # Light blur for stable edges.
+        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
 
-        kernel = np.ones((5, 5), np.uint8)
-        mask_clean = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+        # Canny settings.
+        edges = cv2.Canny(blurred, 0, 85)
+        height, width = edges.shape
 
-        color = (0, 255, 255)
-        overlay = debug.copy()
-        overlay[mask_clean > 0] = (
-            0.4 * overlay[mask_clean > 0]
-            + 0.6 * np.array(color, dtype=np.uint8)
-        )
-        debug = overlay
+        # Ignore the top and bottom letterbox.
+        top_limit = int(0.15 * height)
+        bottom_limit = int(0.85 * height)
 
-        ys, xs = np.where(mask_clean > 0)
-        if len(ys) == 0:
-            cv2.putText(debug, "Diameter: N/A", (425, debug.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            return debug, None
+        # Measurement columns: 10%, 50%, 90%.
+        cols = [
+            int(0.10 * width),
+            int(0.50 * width),
+            int(0.90 * width)
+        ]
 
-        points = np.column_stack((xs, ys))
-        hull = cv2.convexHull(points)
+        diameters = []
+        colors = [
+            (255, 255, 0), # Left.
+            (0, 255, 0),   # Middle.
+            (0, 255, 255)  # Right.
+        ]
 
-        hull_ys = hull[:, 0, 1]
-        top_y = int(np.min(hull_ys))
-        bot_y = int(np.max(hull_ys))
-        height_raw = bot_y - top_y
+        # Measure each column.
+        for i, col in enumerate(cols):
+            col = int(np.clip(col, 0, width - 1))
 
-        if height_raw < 5:
-            cv2.putText(debug, "Diameter: N/A", (425, debug.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            return debug, None
+            ys = np.where(edges[top_limit:bottom_limit, col] > 0)[0]
+            if len(ys) < 2:
+                continue
 
-        self.diameter_history.append(height_raw)
-        if len(self.diameter_history) > 5:
-            self.diameter_history.pop(0)
-        height = float(np.mean(self.diameter_history))
+            top_y = ys[0] + top_limit
+            bottom_y = ys[-1] + top_limit
 
-        cv2.line(debug, (0, top_y), (debug.shape[1], top_y), (0, 255, 0), 2)
-        cv2.line(debug, (0, bot_y), (debug.shape[1], bot_y), (0, 255, 0), 2)
+            diameter = bottom_y - top_y
+            diameters.append(diameter)
 
-        cv2.putText(debug, f"Diameter: {height:.1f}px", (425, debug.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            # Draw scanline.
+            cv2.line(debug, (col, top_limit), (col, bottom_limit), colors[i], 1)
 
-        return debug, height
+            # Draw diameter.
+            cv2.circle(debug, (col, top_y), 4, (0, 0, 255), -1)
+            cv2.circle(debug, (col, bottom_y), 4, (0, 0, 255), -1)
+            cv2.line(debug, (col, top_y), (col, bottom_y), colors[i], 2)
 
+            cv2.putText(
+                debug,
+                f"Diameter: {diameter}px",
+                (col + 5, top_y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                colors[i],
+                2
+            )
+
+            # No detections.
+            if len(diameters) == 0:
+                cv2.putText(
+                    debug,
+                    "Diameter: N/A",
+                    (420, height - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (255, 255, 255),
+                    2
+                )
+                return debug, None
+
+            # Averaging & smoothing values.
+            avg_diameter = float(np.mean(diameters))
+
+            self.diameter_history.append(avg_diameter)
+            if len(self.diameter_history) > 5:
+                self.diameter_history.pop(0)
+
+            smoothed_diameter = float(np.mean(self.diameter_history))
+
+            # Draw averaged diameter.
+            cv2.putText(
+                debug,
+                f"Diameter: {smoothed_diameter:.2f}px",
+                (420, height - 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.7,
+                (255, 255, 255),
+                2
+            )
+        return debug, smoothed_diameter
+        
     def stop(self):
         self.running = False
