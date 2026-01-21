@@ -13,9 +13,6 @@ class ServiceHandler(QObject):
         self.relay = SerialHandler("COM5", 9600)
         self.pressure = SerialHandler("COM4", 115200)
 
-        #self.relay = MockSerialHandler("Relay", should_connect=True) #SerialHandler("COM5", 9600)
-        #self.pressure = MockSerialHandler("Pressure", should_connect=True) #SerialHandler("COM4", 115200)
-
         self._pressure_last = False
         self._relay_last = False
 
@@ -51,7 +48,7 @@ class ServiceHandler(QObject):
 
     @Slot()
     def connect(self):
-        self.timer.start(500)
+        self.timer.start(1000)
 
     @Slot()
     def disconnect(self):
