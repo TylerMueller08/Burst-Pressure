@@ -1,4 +1,4 @@
-import serial, random, re, utils
+import serial, re, utils
 
 class SerialHandler:
     def __init__(self, port, baudrate, timeout=1):
@@ -67,6 +67,19 @@ class MockSerialHandler:
         self.should_connect = should_connect
         self.connected = False
 
+        self.volume = 0.0
+        self.flow_rate = 0.017
+
+        self.base_stiffness = 0.8
+        self.stiffness_growth = 3.0
+
+        self.burst_pressure = 25.0
+        self.leak_pressure = 12.0
+        self.decay_rate = 0.15
+
+        self.burst = False
+        self.pressure = 0.0
+
     def connect(self):
         if not self.connected and self.should_connect:
             self.connected = True
@@ -82,8 +95,28 @@ class MockSerialHandler:
             utils.log("Mock Serial Handler", f"Sent Command: {command}")
 
     def read(self):
-        if self.connected:
-            return random.uniform(0.0, 16.0)
+        if not self.connected:
+            return None
+
+        # After burst: pressure decays toward leak_pressure
+        if self.burst:
+            self.pressure += (self.leak_pressure - self.pressure) * self.decay_rate
+            return self.pressure
+
+        # Inject fluid
+        self.volume += self.flow_rate
+
+        # Nonlinear stiffening
+        stiffness = self.base_stiffness * (1 + self.stiffness_growth * self.volume**2)
+
+        self.pressure = stiffness * self.volume
+
+        # Trigger burst
+        if self.pressure >= self.burst_pressure:
+            self.burst = True
+            utils.log("Mock Serial Handler", "Tube burst (slow leak)")
+
+        return self.pressure
     
     @property
     def is_connected(self):

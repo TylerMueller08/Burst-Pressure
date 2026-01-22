@@ -10,8 +10,11 @@ class ServiceHandler(QObject):
     def __init__(self):
         super().__init__()
 
-        self.relay = SerialHandler("COM5", 9600)
-        self.pressure = SerialHandler("COM4", 115200)
+        # self.relay = SerialHandler("COM5", 9600)
+        # self.pressure = SerialHandler("COM4", 115200)
+
+        self.relay = MockSerialHandler("COM5", True)
+        self.pressure = MockSerialHandler("COM4", True)
 
         self._pressure_last = False
         self._relay_last = False

@@ -1,5 +1,4 @@
 from PySide6.QtCore import QThread
-from ultralytics import YOLO
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -18,8 +17,9 @@ class AnalysisWorker(QThread):
         super().start()
 
     def run(self):
-        utils.log("Analysis Worker", "Started Analysis")
         try:
+            utils.log("Analysis Worker", "Started Analysis")
+
             df = pd.read_csv(self.csv_path)
             utils.log("Analysis Worker", "CSV Loaded")
 
@@ -39,7 +39,6 @@ class AnalysisWorker(QThread):
 
             file_dir = os.path.dirname(self.video_path)
             processed_dir = os.path.join(file_dir, "processed")
-
             os.makedirs(processed_dir, exist_ok=True)
 
             video_name = os.path.basename(self.video_path).replace(".mp4", "_PROCESSED.mp4")
@@ -64,7 +63,6 @@ class AnalysisWorker(QThread):
                     break
 
                 frame_index += 1
-
                 processed_frame, diameter = self.process_frame(frame)
                 writer.write(processed_frame)
 
@@ -80,36 +78,44 @@ class AnalysisWorker(QThread):
             writer.release()
 
             df["Diameter [px]"] = diameter_list[:len(df)]
+            df["Diameter [px]"] = df["Diameter [px]"]
             df.to_csv(output_csv, index=False)
 
-            # Stress-Strain (Needs work)
-            internal_diameter = 1 / 16 # Inches
-            wall_thickness = 1 / 32 # Inches
-            pxiels_to_inches = 0.125 / 185
-
             df = pd.read_csv(output_csv)
-            pressure = df["Pressure [PSI]"].astype(float)
+
+            pressure = df["Pressure [kPa]"].astype(float)
             diameter = df["Diameter [px]"].astype(float)
-            initial_diameter = diameter.iloc[0]
 
-            df["Stress"] = (pressure * diameter) / (2 * wall_thickness)
-            df["Strain"] = (diameter - initial_diameter) / initial_diameter
+            # Reference (low pressure) state.
+            P0 = pressure.iloc[0]
+            D0 = diameter.iloc[0]
 
-            df["True_Strain"] = np.log(1 + df["Strain"])
-            df["True_Stress"] = df["Stress"] * (1 + df["Strain"])
+            # Circumferential strain
+            df["Strain"] = (diameter - D0) / D0
 
-            df_sorted = df.sort_values("True_Strain")
+            # Hoop stress
+            df["Hoop_Stress"] = pressure - P0
+
+            df.loc[0, "Strain"] = 0.0
+            df.loc[0, "Hoop_Stress"] = 0.0
+
+            df["Strain"] = df["Strain"].rolling(window=5, min_periods=1, center=True).mean()
+            df["Hoop_Stress"] = df["Hoop_Stress"].rolling(window=5, min_periods=1, center=True).mean()
+
+            df_sorted = df.sort_values("Strain")
 
             plt.figure(figsize=(8, 5))
-            plt.plot(df_sorted["True_Strain"], df_sorted["True_Stress"], linewidth=2)
-            plt.xlabel("log Strain")
-            plt.ylabel("log Stress")
-            plt.title("Stress-Strain Curve")
+            plt.plot(df_sorted["Strain"], df_sorted["Hoop_Stress"], linewidth=2)
+            plt.xlabel("Circumferential Strain (ΔD / D₀)")
+            plt.ylabel("Hoop Stress Proxy (kPa)")
+            plt.title("Pressure-Strain Response")
             plt.grid(True)
             plt.tight_layout()
             plt.savefig(os.path.join(processed_dir, "stress_strain_plot"), dpi=300)
+            plt.close()
 
             strain_name = os.path.basename(self.csv_path).replace(".csv", "_STRAIN.csv")
+            df.round(2).to_csv(os.path.join(processed_dir, strain_name), index=False)
             df.to_csv(os.path.join(processed_dir, strain_name))
 
             utils.log("Analysis Worker", "Analysis Completed")
@@ -148,9 +154,9 @@ class AnalysisWorker(QThread):
 
         diameters = []
         colors = [
-            (255, 255, 0), # Left.
-            (0, 255, 0),   # Middle.
-            (0, 255, 255)  # Right.
+            (0, 0, 0), # Left.
+            (0, 0, 0), # Middle.
+            (0, 0, 0)  # Right.
         ]
 
         # Measure each column.
@@ -177,12 +183,12 @@ class AnalysisWorker(QThread):
 
             cv2.putText(
                 debug,
-                f"Diameter: {diameter}px",
+                f"{diameter}px",
                 (col + 5, top_y - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
+                0.4,
                 colors[i],
-                2
+                1
             )
 
             # No detections.
@@ -207,16 +213,16 @@ class AnalysisWorker(QThread):
 
             smoothed_diameter = float(np.mean(self.diameter_history))
 
-            # Draw averaged diameter.
-            cv2.putText(
-                debug,
-                f"Diameter: {smoothed_diameter:.2f}px",
-                (420, height - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (255, 255, 255),
-                2
-            )
+        # Draw averaged diameter.
+        cv2.putText(
+            debug,
+            f"Diameter: {smoothed_diameter:.2f}px",
+            (420, height - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (255, 255, 255),
+            2
+        )
         return debug, smoothed_diameter
         
     def stop(self):

@@ -1,6 +1,7 @@
 from PySide6.QtCore import QThread
 import os, utils
 import cv2, csv
+import math
 
 class ServiceWorker(QThread):
     def __init__(self, pressure_handler=None, start_time=None, prefix="Unlabeled", fps=10):
@@ -8,14 +9,14 @@ class ServiceWorker(QThread):
         self.pressure_handler = pressure_handler
         self.start_time = start_time
         self.prefix = prefix
-        self.fps = fps
+        self.fps = fps          # desired output FPS
         self.next_time = None
-        self.interval = 0.1
+        self.interval = 1.0 / fps  # seconds per frame at desired FPS
         self.running = False
 
     def start(self):
         self.running = True
-        self.next_time = self.interval
+        self.next_time = 0.0
         super().start()
 
     def run(self):
@@ -24,46 +25,64 @@ class ServiceWorker(QThread):
 
         video_file = f"{folder}/{self.prefix}_VIDEO.mp4"
         csv_file = f"{folder}/{self.prefix}_DATA.csv"
-        
+
         csvf = open(csv_file, "w", newline="")
         writer = csv.writer(csvf)
-        writer.writerow(["Elapsed Time [s]", "Pressure [PSI]"])
+        writer.writerow(["Elapsed Time [s]", "Pressure [kPa]"])
 
-        cap = cv2.VideoCapture(0)
+        # Input video path
+        input_path = r"C:\Users\Tyler Mueller\Downloads\Example_VIDEO.mp4"
+        cap = cv2.VideoCapture(input_path)
+
         if not cap.isOpened():
-            utils.log("Service Worker", "No camera found")
+            utils.log("Service Worker", f"Failed to open video: {input_path}")
             return
 
+        # Original video properties
+        orig_fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+        # Video writer
         out = cv2.VideoWriter(
             video_file,
             cv2.VideoWriter_fourcc(*"mp4v"),
             self.fps,
-            (width, height))
+            (width, height)
+        )
 
         utils.log("Service Worker", f"Video Recording Started at {video_file}")
         utils.log("Service Worker", f"CSV Recording Started at {csv_file}")
+
+        # How many original frames to skip to hit desired FPS
+        frame_interval = orig_fps / self.fps
+        next_frame_idx = 0.0
+        current_frame_idx = 0
 
         while self.running:
             ret, frame = cap.read()
             if not ret:
                 break
 
-            # Shared pressure
-            pressure = self.pressure_handler.read()
-            if pressure is None:
-                pressure = 0.0
+            if current_frame_idx >= math.floor(next_frame_idx):
+                # Read pressure
+                pressure = self.pressure_handler.read() or 0.0
+                pressure_kpa = pressure * 6.89476
 
-            # Overlay
-            cv2.putText(frame, f"Time: {self.next_time:.1f}s", (10, frame.shape[0]-30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            cv2.putText(frame, f"Pressure: {pressure:.2f}PSI", (10, frame.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                # Overlay
+                cv2.putText(frame, f"Time: {self.next_time:.1f}s", (10, height - 30),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                cv2.putText(frame, f"Pressure: {pressure_kpa:.2f}kPa", (10, height - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
-            out.write(frame)
-            writer.writerow([f"{self.next_time:.1f}", f"{pressure:.2f}"])
+                out.write(frame)
+                writer.writerow([f"{self.next_time:.1f}", f"{pressure_kpa:.2f}"])
 
-            self.next_time += self.interval
+                self.next_time += self.interval
+                next_frame_idx += frame_interval
+
+            current_frame_idx += 1
 
         cap.release()
         out.release()
