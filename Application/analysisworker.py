@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import cv2, os, utils
+import warnings
 
 class AnalysisWorker(QThread):
     def __init__(self, csv_path, video_path):
@@ -11,6 +12,7 @@ class AnalysisWorker(QThread):
         self.video_path = video_path
         self.running = False
         self.diameter_history = []
+        warnings.filterwarnings("ignore")
 
     def start(self):
         self.running = True
@@ -44,7 +46,7 @@ class AnalysisWorker(QThread):
             video_name = os.path.basename(self.video_path).replace(".mp4", "_PROCESSED.mp4")
             csv_name = os.path.basename(self.csv_path).replace(".csv", "_PROCESSED.csv")
             combined_video_path = os.path.join(processed_dir, "combined_video.mp4")
-            graph_png = os.path.join(processed_dir, "stress_strain_plot.png")
+            graph_png = os.path.join(processed_dir, "Stress-Strain_Plot.png")
             output_video = os.path.join(processed_dir, video_name)
             output_csv = os.path.join(processed_dir, csv_name)
 
@@ -70,13 +72,14 @@ class AnalysisWorker(QThread):
                 frames.append(processed_frame)
                 diameter_list.append(diameter if diameter is not None else 0)
 
-                percent_complete = (frame_index / total_frames) * 100
-                utils.log("Analysis Worker", f"Processed Frame {frame_index}/{total_frames} ({percent_complete:.2f}%)")
+            utils.log("Analysis Worker", "Video Processing Completed.")
+            utils.log("Analysis Worker", "Processing Outputs. Please wait...")
 
             vid.release()
             writer.release()
 
             df["Diameter [px]"] = diameter_list[:len(df)]
+            df["Diameter [px]"] = df["Diameter [px]"].round(2)
             df.to_csv(output_csv, index=False)
 
             df = pd.read_csv(output_csv)
@@ -88,24 +91,24 @@ class AnalysisWorker(QThread):
             P0 = pressure.iloc[0]
             D0 = diameter.iloc[0]
 
-            # Circumferential strain
+            # Circumferential strain.
             df["Strain"] = (diameter - D0) / D0
 
-            # Hoop stress
-            df["Hoop_Stress"] = pressure - P0
+            # Circumferential stress.
+            df["Stress"] = pressure - P0
 
             df.loc[0, "Strain"] = 0.0
-            df.loc[0, "Hoop_Stress"] = 0.0
+            df.loc[0, "Stress"] = 0.0
 
-            df["Strain"] = df["Strain"].rolling(window=5, min_periods=1, center=True).mean()
-            df["Hoop_Stress"] = df["Hoop_Stress"].rolling(window=5, min_periods=1, center=True).mean()
+            df["Strain"] = df["Strain"].round(5).rolling(window=5, min_periods=1, center=True).mean()
+            df["Stress"] = df["Stress"].round(5).rolling(window=5, min_periods=1, center=True).mean()
 
             df_sorted = df.sort_values("Strain")
 
             plt.figure(figsize=(8, 5))
-            plt.plot(df_sorted["Strain"], df_sorted["Hoop_Stress"], linewidth=2)
+            plt.plot(df_sorted["Strain"], df_sorted["Stress"], linewidth=2)
             plt.xlabel("Circumferential Strain (ΔD / D₀)")
-            plt.ylabel("Hoop Stress Proxy (kPa)")
+            plt.ylabel("Circumferential Stress (kPa)")
             plt.title("Stress-Strain Curve")
             plt.grid(True)
             plt.tight_layout()
@@ -116,7 +119,7 @@ class AnalysisWorker(QThread):
             df.round(2).to_csv(os.path.join(processed_dir, strain_name), index=False)
             df.to_csv(os.path.join(processed_dir, strain_name))
 
-            # Create combined video with graph on the right
+            # Combined video w/ video & graph.
             combined_width, combined_height = 1280, 480
             graph_width, graph_height = 640, 480
             combined_writer = cv2.VideoWriter(
@@ -126,15 +129,15 @@ class AnalysisWorker(QThread):
                 (combined_width, combined_height)
             )
 
-            # Precompute fixed axis limits
+            # Precompute fixed axis limits.
             x_min, x_max = df_sorted["Strain"].min(), df_sorted["Strain"].max()
-            y_min, y_max = df_sorted["Hoop_Stress"].min(), df_sorted["Hoop_Stress"].max()
+            y_min, y_max = df_sorted["Stress"].min(), df_sorted["Stress"].max()
 
             for i, frame in enumerate(frames):
                 plt.figure(figsize=(6.4, 4.8), dpi=100)
-                plt.plot(df_sorted["Strain"][:i+1], df_sorted["Hoop_Stress"][:i+1], color='blue', linewidth=2)
+                plt.plot(df_sorted["Strain"][:i+1], df_sorted["Stress"][:i+1], color='blue', linewidth=2)
                 plt.xlabel("Circumferential Strain (ΔD / D₀)")
-                plt.ylabel("Hoop Stress Proxy (kPa)")
+                plt.ylabel("Circumferential Stress (kPa)")
                 plt.title("Stress-Strain Curve")
                 plt.grid(True)
                 plt.xlim(x_min, x_max)
@@ -158,14 +161,14 @@ class AnalysisWorker(QThread):
 
             combined_writer.release()
 
-            utils.log("Analysis Worker", "Analysis Completed")
-            utils.log("Analysis Worker", f"Output CSV: {output_csv}")
-            utils.log("Analysis Worker", f"Output Video: {output_video}")
-            utils.log("Analysis Worker", f"Combined Video: {combined_video_path}")
-            utils.log("Analysis Worker", f"Stress-Strain PNG: {graph_png}")
+            utils.log("Analysis Worker", f"Output CSV: {output_csv}.")
+            utils.log("Analysis Worker", f"Output Video: {output_video}.")
+            utils.log("Analysis Worker", f"Combined Video: {combined_video_path}.")
+            utils.log("Analysis Worker", f"Stress-Strain PNG: {graph_png}.")
+            utils.log("Analysis Worker", "Analysis Completed.")
 
         except Exception as e:
-            utils.log("Analysis Worker", f"Error: {e}")
+            utils.log("Analysis Worker", f"Error: {e}.")
 
 
     def process_frame(self, frame):
