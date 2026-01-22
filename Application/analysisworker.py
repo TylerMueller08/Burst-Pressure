@@ -43,7 +43,8 @@ class AnalysisWorker(QThread):
 
             video_name = os.path.basename(self.video_path).replace(".mp4", "_PROCESSED.mp4")
             csv_name = os.path.basename(self.csv_path).replace(".csv", "_PROCESSED.csv")
-
+            combined_video_path = os.path.join(processed_dir, "combined_video.mp4")
+            graph_png = os.path.join(processed_dir, "stress_strain_plot.png")
             output_video = os.path.join(processed_dir, video_name)
             output_csv = os.path.join(processed_dir, csv_name)
 
@@ -55,6 +56,7 @@ class AnalysisWorker(QThread):
             )
 
             diameter_list = []
+            frames = []
             frame_index = 0
 
             while self.running:
@@ -65,11 +67,8 @@ class AnalysisWorker(QThread):
                 frame_index += 1
                 processed_frame, diameter = self.process_frame(frame)
                 writer.write(processed_frame)
-
-                if diameter is None:
-                    diameter_list.append(0)
-                else:
-                    diameter_list.append(diameter)
+                frames.append(processed_frame)
+                diameter_list.append(diameter if diameter is not None else 0)
 
                 percent_complete = (frame_index / total_frames) * 100
                 utils.log("Analysis Worker", f"Processed Frame {frame_index}/{total_frames} ({percent_complete:.2f}%)")
@@ -78,7 +77,6 @@ class AnalysisWorker(QThread):
             writer.release()
 
             df["Diameter [px]"] = diameter_list[:len(df)]
-            df["Diameter [px]"] = df["Diameter [px]"]
             df.to_csv(output_csv, index=False)
 
             df = pd.read_csv(output_csv)
@@ -108,22 +106,67 @@ class AnalysisWorker(QThread):
             plt.plot(df_sorted["Strain"], df_sorted["Hoop_Stress"], linewidth=2)
             plt.xlabel("Circumferential Strain (ΔD / D₀)")
             plt.ylabel("Hoop Stress Proxy (kPa)")
-            plt.title("Pressure-Strain Response")
+            plt.title("Stress-Strain Curve")
             plt.grid(True)
             plt.tight_layout()
-            plt.savefig(os.path.join(processed_dir, "stress_strain_plot"), dpi=300)
+            plt.savefig(graph_png, dpi=300)
             plt.close()
 
             strain_name = os.path.basename(self.csv_path).replace(".csv", "_STRAIN.csv")
             df.round(2).to_csv(os.path.join(processed_dir, strain_name), index=False)
             df.to_csv(os.path.join(processed_dir, strain_name))
 
+            # Create combined video with graph on the right
+            combined_width, combined_height = 1280, 480
+            graph_width, graph_height = 640, 480
+            combined_writer = cv2.VideoWriter(
+                combined_video_path,
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                fps,
+                (combined_width, combined_height)
+            )
+
+            # Precompute fixed axis limits
+            x_min, x_max = df_sorted["Strain"].min(), df_sorted["Strain"].max()
+            y_min, y_max = df_sorted["Hoop_Stress"].min(), df_sorted["Hoop_Stress"].max()
+
+            for i, frame in enumerate(frames):
+                plt.figure(figsize=(6.4, 4.8), dpi=100)
+                plt.plot(df_sorted["Strain"][:i+1], df_sorted["Hoop_Stress"][:i+1], color='blue', linewidth=2)
+                plt.xlabel("Circumferential Strain (ΔD / D₀)")
+                plt.ylabel("Hoop Stress Proxy (kPa)")
+                plt.title("Stress-Strain Curve")
+                plt.grid(True)
+                plt.xlim(x_min, x_max)
+                plt.ylim(y_min, y_max)
+
+                # Render figure to numpy array
+                from io import BytesIO
+                buf = BytesIO()
+                plt.savefig(buf, format='png', dpi=100)
+                buf.seek(0)
+                img_arr = np.frombuffer(buf.getvalue(), dtype=np.uint8)
+                buf.close()
+                graph_img = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+                graph_img = cv2.cvtColor(graph_img, cv2.COLOR_RGB2BGR)
+                graph_img = cv2.resize(graph_img, (graph_width, graph_height))
+                plt.close()
+
+                # Combine video frame and graph side by side
+                combined_frame = np.hstack((frame, graph_img))
+                combined_writer.write(combined_frame)
+
+            combined_writer.release()
+
             utils.log("Analysis Worker", "Analysis Completed")
             utils.log("Analysis Worker", f"Output CSV: {output_csv}")
             utils.log("Analysis Worker", f"Output Video: {output_video}")
+            utils.log("Analysis Worker", f"Combined Video: {combined_video_path}")
+            utils.log("Analysis Worker", f"Stress-Strain PNG: {graph_png}")
 
         except Exception as e:
             utils.log("Analysis Worker", f"Error: {e}")
+
 
     def process_frame(self, frame):
         import numpy as np
