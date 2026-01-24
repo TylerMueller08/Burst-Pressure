@@ -105,7 +105,7 @@ class AnalysisWorker(QThread):
             plt.plot(df["Strain"], df["Stress [kPa]"], color='red', linewidth=2)
             plt.xlabel(r"Circumferential Strain, $\epsilon_\theta$")
             plt.ylabel(r"Hoop Stress, $\sigma_\theta$ [kPa]")
-            plt.title("Hoop Stress vs Circumferential Strain")
+            plt.title("Stress vs Strain")
             plt.grid(True)
             plt.tight_layout()
             plt.savefig(strain_strain_png, dpi=300)
