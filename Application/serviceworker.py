@@ -4,7 +4,7 @@ import cv2, csv
 import math
 
 class ServiceWorker(QThread):
-    def __init__(self, pressure_handler=None, start_time=None, prefix="Unlabeled", fps=10):
+    def __init__(self, pressure_handler=None, start_time=None, prefix="Unlabeled", fps=10, pressure_csv=r"C:\Users\Tyler Mueller\Downloads\Example_DATA.csv"):
         super().__init__()
         self.pressure_handler = pressure_handler
         self.start_time = start_time
@@ -14,8 +14,9 @@ class ServiceWorker(QThread):
         self.interval = 1.0 / fps  # seconds per frame at desired FPS
         self.running = False
         self.pressure_data = []
+        self.pressure_csv = pressure_csv
 
-        if self.pressure_csv:
+        if self.pressure_csv is not None:
             self._load_csv(self.pressure_csv)
 
     def _load_csv(self, csv_path):
@@ -57,7 +58,7 @@ class ServiceWorker(QThread):
         )
 
         utils.log("Service Worker", f"Video Recording Started at {video_file}")
-        utils.log("Service Worker", f"CSV Recording Started at {csv_file}")
+        # utils.log("Service Worker", f"CSV Recording Started at {csv_file}")
 
         # How many original frames to skip to hit desired FPS
         frame_interval = orig_fps / self.fps
@@ -72,7 +73,7 @@ class ServiceWorker(QThread):
                 break
 
             if current_frame_idx >= math.floor(next_frame_idx):
-                if self.pressure and csv_idx < len(self.pressure_data):
+                if self.pressure_data and csv_idx < len(self.pressure_data):
                     elapsed_time, pressure_kpa = self.pressure_data[csv_idx]
                 else:
                     pressure_kpa = 0.0  # Default if no data.
