@@ -13,6 +13,16 @@ class ServiceWorker(QThread):
         self.next_time = None
         self.interval = 1.0 / fps  # seconds per frame at desired FPS
         self.running = False
+        self.pressure_data = []
+
+        if self.pressure_csv:
+            self._load_csv(self.pressure_csv)
+
+    def _load_csv(self, csv_path):
+        with open(csv_path, newline="") as f:
+            reader = csv.reader(f)
+            headers = next(reader)
+            self.pressure_data = [(float(row[0]), float(row[1])) for row in reader]
 
     def start(self):
         self.running = True
@@ -24,11 +34,6 @@ class ServiceWorker(QThread):
         os.makedirs(folder, exist_ok=True)
 
         video_file = f"{folder}/{self.prefix}_VIDEO.mp4"
-        csv_file = f"{folder}/{self.prefix}_DATA.csv"
-
-        csvf = open(csv_file, "w", newline="")
-        writer = csv.writer(csvf)
-        writer.writerow(["Elapsed Time [s]", "Pressure [kPa]"])
 
         # Input video path
         input_path = r"C:\Users\Tyler Mueller\Downloads\Example_VIDEO.mp4"
@@ -40,7 +45,6 @@ class ServiceWorker(QThread):
 
         # Original video properties
         orig_fps = cap.get(cv2.CAP_PROP_FPS)
-        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -60,15 +64,18 @@ class ServiceWorker(QThread):
         next_frame_idx = 0.0
         current_frame_idx = 0
 
+        csv_idx = 0
+
         while self.running:
             ret, frame = cap.read()
             if not ret:
                 break
 
             if current_frame_idx >= math.floor(next_frame_idx):
-                # Read pressure
-                pressure = self.pressure_handler.read() or 0.0
-                pressure_kpa = pressure * 6.89476
+                if self.pressure and csv_idx < len(self.pressure_data):
+                    elapsed_time, pressure_kpa = self.pressure_data[csv_idx]
+                else:
+                    pressure_kpa = 0.0  # Default if no data.
 
                 # Overlay
                 cv2.putText(frame, f"Time: {self.next_time:.1f}s", (10, height - 30),
@@ -77,16 +84,15 @@ class ServiceWorker(QThread):
                             cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
                 out.write(frame)
-                writer.writerow([f"{self.next_time:.1f}", f"{pressure_kpa:.2f}"])
 
                 self.next_time += self.interval
                 next_frame_idx += frame_interval
+                csv_idx += 1
 
             current_frame_idx += 1
 
         cap.release()
         out.release()
-        csvf.close()
 
         utils.log("Service Worker", "Recording Stopped")
 

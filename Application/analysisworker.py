@@ -144,7 +144,6 @@ class AnalysisWorker(QThread):
             plt.close()
 
 
-
             # Combined video w/ video & graph.
             combined_width, combined_height = 1280, 480
             graph_width, graph_height = 640, 480
