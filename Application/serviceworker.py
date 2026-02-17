@@ -1,6 +1,5 @@
 from PySide6.QtCore import QThread
-import os, utils
-import cv2, csv
+import math, cv2, csv, os, utils
 
 class ServiceWorker(QThread):
     def __init__(self, pressure_handler=None, start_time=None, prefix="Unlabeled", fps=10):
@@ -27,7 +26,7 @@ class ServiceWorker(QThread):
         
         csvf = open(csv_file, "w", newline="")
         writer = csv.writer(csvf)
-        writer.writerow(["Elapsed Time [s]", "Pressure [PSI]"])
+        writer.writerow(["Elapsed Time [s]", "Pressure [kPa]"])
 
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
@@ -51,8 +50,7 @@ class ServiceWorker(QThread):
             if not ret:
                 break
 
-            # Shared pressure
-            pressure = self.pressure_handler.read()
+            pressure = self.pressure_handler.read() * 6.89476
             if pressure is None:
                 pressure = 0.0
 

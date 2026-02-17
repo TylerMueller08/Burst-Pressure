@@ -1,9 +1,8 @@
 from PySide6.QtCore import QThread
-from ultralytics import YOLO
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import cv2, os, utils
+import cv2, os, utils, warnings
 
 class AnalysisWorker(QThread):
     def __init__(self, csv_path, video_path):
@@ -12,6 +11,7 @@ class AnalysisWorker(QThread):
         self.video_path = video_path
         self.running = False
         self.diameter_history = []
+        warnings.filterwarnings("ignore")
 
     def start(self):
         self.running = True
@@ -39,12 +39,14 @@ class AnalysisWorker(QThread):
 
             file_dir = os.path.dirname(self.video_path)
             processed_dir = os.path.join(file_dir, "processed")
-
             os.makedirs(processed_dir, exist_ok=True)
 
             video_name = os.path.basename(self.video_path).replace(".mp4", "_PROCESSED.mp4")
             csv_name = os.path.basename(self.csv_path).replace(".csv", "_PROCESSED.csv")
-
+            combined_video_path = os.path.join(processed_dir, "Combined_Video.mp4")
+            stress_strain_png = os.path.join(processed_dir, "Stress-Strain_Plot.png")
+            compliance_png = os.path.join(processed_dir, "Compliance.png")
+            pressure_diameter_png = os.path.join(processed_dir, "Pressure-Diameter.png")
             output_video = os.path.join(processed_dir, video_name)
             output_csv = os.path.join(processed_dir, csv_name)
 
@@ -56,6 +58,7 @@ class AnalysisWorker(QThread):
             )
 
             diameter_list = []
+            frames = []
             frame_index = 0
 
             while self.running:
@@ -64,57 +67,128 @@ class AnalysisWorker(QThread):
                     break
 
                 frame_index += 1
-
                 processed_frame, diameter = self.process_frame(frame)
                 writer.write(processed_frame)
+                frames.append(processed_frame)
+                diameter_list.append(diameter if diameter is not None else 0)
 
-                if diameter is None:
-                    diameter_list.append(0)
-                else:
-                    diameter_list.append(diameter)
-
-                percent_complete = (frame_index / total_frames) * 100
-                utils.log("Analysis Worker", f"Processed Frame {frame_index}/{total_frames} ({percent_complete:.2f}%)")
+            utils.log("Analysis Worker", "Video Processing Completed")
+            utils.log("Analysis Worker", "Processing Outputs. Please wait")
 
             vid.release()
             writer.release()
 
             df["Diameter [px]"] = diameter_list[:len(df)]
-            df.to_csv(output_csv, index=False)
+            df["Diameter [px]"] = df["Diameter [px]"].round(2)
 
-            # Stress-Strain (Needs work)
-            internal_diameter = 1 / 16 # Inches
-            wall_thickness = 1 / 32 # Inches
-            pxiels_to_inches = 0.125 / 185
+            pressure = df["Pressure [kPa]"]
+            diameter = df["Diameter [px]"]
 
-            df = pd.read_csv(output_csv)
-            pressure = df["Pressure [PSI]"].astype(float)
-            diameter = df["Diameter [px]"].astype(float)
-            initial_diameter = diameter.iloc[0]
+            # Reference (low pressure) state.
+            P0 = pressure.iloc[0]
+            D0 = diameter.iloc[0]
 
-            df["Stress"] = (pressure * diameter) / (2 * wall_thickness)
-            df["Strain"] = (diameter - initial_diameter) / initial_diameter
+            # Calculate stress and strain.
+            df["Stress [kPa]"] = pressure - P0
+            df["Strain"] = (diameter - D0) / D0
 
-            df["True_Strain"] = np.log(1 + df["Strain"])
-            df["True_Stress"] = df["Stress"] * (1 + df["Strain"])
+            # rolling(window=5, min_periods=1, center=True).mean()
+            df["Stress [kPa]"] = df["Stress [kPa]"].round(5)
+            df["Strain"] = df["Strain"].round(5)
 
-            df_sorted = df.sort_values("True_Strain")
+            processed_df = df[["Elapsed Time [s]", "Pressure [kPa]", "Diameter [px]", "Stress [kPa]", "Strain"]]
+            processed_df.to_csv(output_csv, index=False)
 
+            # Stress-Strain Graph.
             plt.figure(figsize=(8, 5))
-            plt.plot(df_sorted["True_Strain"], df_sorted["True_Stress"], linewidth=2)
-            plt.xlabel("log Strain")
-            plt.ylabel("log Stress")
-            plt.title("Stress-Strain Curve")
+            plt.plot(df["Strain"], df["Stress [kPa"], color='red', linewidth=2)
+            plt.xlabel(r"Circumferential Strain, $\epsilon_\theta$")
+            plt.ylabel(r"Hoop Stress, $\sigma_\theta$ [kPa")
+            plt.title("Stress vs Strain")
             plt.grid(True)
             plt.tight_layout()
-            plt.savefig(os.path.join(processed_dir, "stress_strain_plot"), dpi=300)
+            plt.savefig(stress_strain_png, dpi=300)
+            plt.close()
 
-            strain_name = os.path.basename(self.csv_path).replace(".csv", "_STRAIN.csv")
-            df.to_csv(os.path.join(processed_dir, strain_name))
+            # Circumferential Compliance Graph.
+            with np.errstate(divide='ignore', invalid='ignore'):
+                compliance = df["Strain"] / df["Stress [kPa]"]
+                compliance.replace([np.inf, -np.inf], np.nan, inplace=True)
+            plt.figure(figsize=(8,5))
+            plt.plot(df["Elapsed Time [s]"], compliance, color='green', linewidth=2)
+            plt.xlabel("Elapsed Time [s]")
+            plt.ylabel(r"Circumferential Compliance, C$_\theta$ [1/kPa]")
+            plt.title("Circumferential Compliance vs Time")
+            plt.grid(True)
+            plt.tight_layout()
+            plt.savefig(compliance_png, dpi=300)
 
+            # Diameter and Pressure vs. Time Graph.
+            fig, ax1 = plt.subplots(figsize(8, 5))
+            ax1.set_xlabel("Elapsed Time [s]")
+            ax1.set_ylabel("Pressure [kPa]", color='orange')
+            ax1.plot(df["Elapsed Time [s]"], df["Pressure [kPa]"], color='orange', linewidth=2, label='Pressure')
+            ax1.tick_params(axis='y', labelcolor='orange')
+
+            ax2 = ax1.twinx()
+            ax2.set_ylabel("Diameter [px]", color='blue')
+            ax2.plot(df["Elapsed Time[s]"], df["Diameter [px]"], color='blue', linewidth=2, label='Diameter')
+            ax2.tick_params(axis='y', labelcolor='blue')
+
+            plt.title("Presusre and Diameter vs Time")
+            ax1.grid(True)
+            fig.tight_layout()
+            plt.savefig(pressure_diameter_png, dpi=300)
+            plt.close()
+
+            # Combined video w/ video & graph.
+            combined_width, combined_height = 1280, 480
+            graph_width, graph_height = 640, 480
+            combined_writer = cv2.VideoWriter(
+                combined_video_path,
+                cv2.VideoWriter_fourcc(*"mp4v"),
+                fps,
+                (combined_width, combined_height)
+            )
+
+            # Precompute fixed axis limits.
+            x_min, x_max = df["Strain"].min(), df["Strain"].max() * 1.1
+            y_min, y_max = df["Stress [kPa]"].min(), df["Stress [kPa]"].max() * 1.1
+
+            for i, frame in enumerate(frames):
+                plt.figure(figsize(6.4, 4.8), dpi=100)
+                plt.plot(dr["Strain"][:i+1], df["Stress [kPa]"][:i+1], color='blue', linewidth=2)
+                plt.xlabel(r"Circumferential Strain, $\epsilon_\theta$")
+                plt.ylabel(r"Hoop Stress, $\sigma_\theta$ [kPa]")
+                plt.grid(True)
+                plt.xlim(x_min, x_max)
+                plt.ylim(y_min, y_max)
+
+                # Render figure to numpy array.
+                from io import BytesIO
+                buf = BytesIO()
+                plt.savefig(buf, format='png', dpi=100)
+                buf.seek(0)
+                img_arr = np.frombuffer(buf.getvalue(), dtype=np.uint8)
+                buf.close()
+                graph_img = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
+                graph_img = cv2.cvtColor(graph_img, cv2.COLOR_RGB2BGR)
+                graph_img = cv2.resize(graph_img, (graph_width, graph_height))
+                plt.close()
+
+                # Combine video frame and graph side by side.
+                combined_frame = np.hstack((frame, graph_img))
+                combined_writer.write(combined_frame)
+
+            combined_writer.release()
+
+            utils.log("Analysis Worker", f"Processed CSV: {output_csv}")
+            utils.log("Analysis Worker", f"Processed Video: {output_video}")
+            utils.log("Analysis Worker", f"Combined Video: {combined_video_path}")
+            utils.log("Analysis Worker", f"Stress-Strain PNG: {stress_strain_png}")
+            utils.log("Analysis Worker", f"Compliance PNG: {compliance_png}")
+            utils.log("Analysis Worker", f"Pressure-Diameter PNG: {pressure_diameter_png}")
             utils.log("Analysis Worker", "Analysis Completed")
-            utils.log("Analysis Worker", f"Output CSV: {output_csv}")
-            utils.log("Analysis Worker", f"Output Video: {output_video}")
 
         except Exception as e:
             utils.log("Analysis Worker", f"Error: {e}")
@@ -145,13 +219,7 @@ class AnalysisWorker(QThread):
             int(0.50 * width),
             int(0.90 * width)
         ]
-
         diameters = []
-        colors = [
-            (255, 255, 0), # Left.
-            (0, 255, 0),   # Middle.
-            (0, 255, 255)  # Right.
-        ]
 
         # Measure each column.
         for i, col in enumerate(cols):
@@ -168,20 +236,20 @@ class AnalysisWorker(QThread):
             diameters.append(diameter)
 
             # Draw scanline.
-            cv2.line(debug, (col, top_limit), (col, bottom_limit), colors[i], 1)
+            cv2.line(debug, (col, top_limit), (col, bottom_limit), (0, 0, 0), 1)
 
             # Draw diameter.
-            cv2.circle(debug, (col, top_y), 4, (0, 0, 255), -1)
-            cv2.circle(debug, (col, bottom_y), 4, (0, 0, 255), -1)
-            cv2.line(debug, (col, top_y), (col, bottom_y), colors[i], 2)
+            cv2.circle(debug, (col, top_y), 4, (0, 255, 0), -1)
+            cv2.circle(debug, (col, bottom_y), 4, (0, 255, 0), -1)
+            cv2.line(debug, (col, top_y), (col, bottom_y), (0, 0, 0), 2)
 
             cv2.putText(
                 debug,
                 f"Diameter: {diameter}px",
                 (col + 5, top_y - 10),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.6,
-                colors[i],
+                0.4,
+                (0, 0, 0),
                 2
             )
 
@@ -198,14 +266,14 @@ class AnalysisWorker(QThread):
                 )
                 return debug, None
 
-            # Averaging & smoothing values.
-            avg_diameter = float(np.mean(diameters))
-
-            self.diameter_history.append(avg_diameter)
-            if len(self.diameter_history) > 5:
-                self.diameter_history.pop(0)
-
-            smoothed_diameter = float(np.mean(self.diameter_history))
+            # Averaging the diameters detected.
+            if len(diameters) > 0:
+                median = np.median(diameters)
+                # replace values more than X px away from median with median.
+                capped = [d if abs(d - median) < 100 else median for d in diameters]
+                avg_diameter = float(np.mean(capped))
+            else:
+                avg_diameter = None
 
             # Draw averaged diameter.
             cv2.putText(
@@ -217,7 +285,7 @@ class AnalysisWorker(QThread):
                 (255, 255, 255),
                 2
             )
-        return debug, smoothed_diameter
+        return debug, avg_diameter
         
     def stop(self):
         self.running = False
