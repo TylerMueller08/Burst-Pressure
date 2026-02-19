@@ -101,7 +101,7 @@ class AnalysisWorker(QThread):
 
             # Stress-Strain Graph.
             plt.figure(figsize=(8, 5))
-            plt.plot(df["Strain"], df["Stress [kPa"], color='red', linewidth=2)
+            plt.plot(df["Strain"], df["Stress [kPa]"], color='red', linewidth=2)
             plt.xlabel(r"Circumferential Strain, $\epsilon_\theta$")
             plt.ylabel(r"Hoop Stress, $\sigma_\theta$ [kPa")
             plt.title("Stress vs Strain")
@@ -114,7 +114,7 @@ class AnalysisWorker(QThread):
             with np.errstate(divide='ignore', invalid='ignore'):
                 compliance = df["Strain"] / df["Stress [kPa]"]
                 compliance.replace([np.inf, -np.inf], np.nan, inplace=True)
-            plt.figure(figsize=(8,5))
+            plt.figure(figsize=(8, 5))
             plt.plot(df["Elapsed Time [s]"], compliance, color='green', linewidth=2)
             plt.xlabel("Elapsed Time [s]")
             plt.ylabel(r"Circumferential Compliance, C$_\theta$ [1/kPa]")
@@ -122,9 +122,10 @@ class AnalysisWorker(QThread):
             plt.grid(True)
             plt.tight_layout()
             plt.savefig(compliance_png, dpi=300)
+            plt.close()
 
             # Diameter and Pressure vs. Time Graph.
-            fig, ax1 = plt.subplots(figsize(8, 5))
+            fig, ax1 = plt.subplots(figsize=(8, 5))
             ax1.set_xlabel("Elapsed Time [s]")
             ax1.set_ylabel("Pressure [kPa]", color='orange')
             ax1.plot(df["Elapsed Time [s]"], df["Pressure [kPa]"], color='orange', linewidth=2, label='Pressure')
@@ -132,7 +133,7 @@ class AnalysisWorker(QThread):
 
             ax2 = ax1.twinx()
             ax2.set_ylabel("Diameter [px]", color='blue')
-            ax2.plot(df["Elapsed Time[s]"], df["Diameter [px]"], color='blue', linewidth=2, label='Diameter')
+            ax2.plot(df["Elapsed Time [s]"], df["Diameter [px]"], color='blue', linewidth=2, label='Diameter')
             ax2.tick_params(axis='y', labelcolor='blue')
 
             plt.title("Presusre and Diameter vs Time")
@@ -156,8 +157,8 @@ class AnalysisWorker(QThread):
             y_min, y_max = df["Stress [kPa]"].min(), df["Stress [kPa]"].max() * 1.1
 
             for i, frame in enumerate(frames):
-                plt.figure(figsize(6.4, 4.8), dpi=100)
-                plt.plot(dr["Strain"][:i+1], df["Stress [kPa]"][:i+1], color='blue', linewidth=2)
+                plt.figure(figsize=(6.4, 4.8), dpi=100)
+                plt.plot(df["Strain"][:i+1], df["Stress [kPa]"][:i+1], color='blue', linewidth=2)
                 plt.xlabel(r"Circumferential Strain, $\epsilon_\theta$")
                 plt.ylabel(r"Hoop Stress, $\sigma_\theta$ [kPa]")
                 plt.grid(True)
@@ -269,22 +270,22 @@ class AnalysisWorker(QThread):
             # Averaging the diameters detected.
             if len(diameters) > 0:
                 median = np.median(diameters)
-                # replace values more than X px away from median with median.
+                # Replace values more than X px away from median with median.
                 capped = [d if abs(d - median) < 100 else median for d in diameters]
                 avg_diameter = float(np.mean(capped))
             else:
                 avg_diameter = None
 
-            # Draw averaged diameter.
-            cv2.putText(
-                debug,
-                f"Diameter: {smoothed_diameter:.2f}px",
-                (420, height - 10),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.7,
-                (255, 255, 255),
-                2
-            )
+        # Draw averaged diameter.
+        cv2.putText(
+            debug,
+            f"Diameter: {avg_diameter:.2f}px",
+            (420, height - 10),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (255, 255, 255),
+            2
+        )
         return debug, avg_diameter
         
     def stop(self):

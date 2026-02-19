@@ -50,13 +50,16 @@ class ServiceWorker(QThread):
             if not ret:
                 break
 
-            pressure = self.pressure_handler.read() * 6.89476
+            pressure = self.pressure_handler.read()
+
             if pressure is None:
                 pressure = 0.0
 
+            pressure *= 6.89476
+
             # Overlay
             cv2.putText(frame, f"Time: {self.next_time:.1f}s", (10, frame.shape[0]-30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
-            cv2.putText(frame, f"Pressure: {pressure:.2f}PSI", (10, frame.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(frame, f"Pressure: {pressure:.2f}kPa", (10, frame.shape[0]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
             out.write(frame)
             writer.writerow([f"{self.next_time:.1f}", f"{pressure:.2f}"])
