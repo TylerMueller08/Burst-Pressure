@@ -22,7 +22,7 @@ class AnalysisHandler(QObject):
 
     @Slot()
     def select_folder(self):
-        folder = QFileDialog.getExistingDirectory(None, "Select Folder Containing Video and CSV")
+        folder = QFileDialog.getExistingDirectory(None, "Select Folder Containing Video and CSV", "data")
         if not folder:
             return
 

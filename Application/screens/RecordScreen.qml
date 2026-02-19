@@ -61,6 +61,7 @@ Item {
         text: checked ? "Stop" : "Start"
         width: 225; height: 70
         checkable: true
+        enabled: false
         anchors {
             bottom: parent.bottom
             bottomMargin: 75
