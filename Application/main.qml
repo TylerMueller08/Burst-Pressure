@@ -25,7 +25,7 @@ Window {
     }
 
     Label {
-        text: "Revised by Tyler Mueller (2026)"
+        text: "GUI by Tyler Mueller (2026)"
         anchors {
             bottom: parent.bottom
             bottomMargin: 8
